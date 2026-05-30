@@ -1,0 +1,41 @@
+$bg-color: #151515;
+$accent-color: #00bfff;
+$text-active-color: #f5f5f5;
+$text-inactive-color: #c0c0c0;
+$pressed-button-color: #c0c0c0;
+
+window.Bar {
+  background: transparent;
+  color: transparent;
+
+  parentbox {
+    background: $bg-color;
+    padding: 3px;
+  }
+
+  StartMenuButton {
+    border-radius: 8px;
+    min-width: 26px;
+    min-height: 26px;
+    background: $accent-color;
+  }
+
+  StartMenuButton.pressed {
+    border-radius: 8px;
+    min-width: 26px;
+    min-height: 26px;
+    background: $pressed-button-color;
+  }
+}
+
+window.StartMenuLayer {
+  background: transparent;
+  color: $text-active-color;
+
+  StartMenu {
+    background: $bg-color;
+    border-radius: 10px;
+    min-width: 400px;
+    min-height: 600px;
+  }
+}
