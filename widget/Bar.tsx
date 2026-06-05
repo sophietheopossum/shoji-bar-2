@@ -17,7 +17,7 @@ export default function Bar({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
       application={app}
     >
       <box cssName="parentbox">
-        <box widthRequest={1}/>
+        <box widthRequest={1} />
         <StartMenuButton gdkmonitor={gdkmonitor} />
       </box>
     </window>

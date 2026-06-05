@@ -4,8 +4,8 @@
     "gnim": "*"
   },
   "scripts": {
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format": "npx prettier --write .",
+    "format:check": "npx prettier --check ."
   },
   "prettier": {
     "semi": false,

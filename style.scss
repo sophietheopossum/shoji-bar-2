@@ -1,4 +1,5 @@
 $bg-color: #151515;
+$bg-up-color: #424242;
 $accent-color: #00bfff;
 $text-active-color: #f5f5f5;
 $text-inactive-color: #c0c0c0;
@@ -37,5 +38,48 @@ window.StartMenuLayer {
     border-radius: 10px;
     min-width: 400px;
     min-height: 600px;
+    transform: translateY(-600px);
+  }
+
+  StartMenu.open {
+    transform: translateY(-16px);
+
+    transition: transform 500ms cubic-bezier(0.1, 0.9, 0.2, 1);
+  }
+
+  StartMenu.close {
+    transform: translateY(-600px);
+
+    transition: transform 500ms cubic-bezier(0.1, 0.9, 0.2, 1);
+  }
+
+  SearchBox {
+    background: $bg-up-color;
+    border-radius: 10px;
+    margin: 10px;
+
+    SearchBoxInner {
+      SearchBoxIcon {
+        margin: 10px;
+      }
+      SearchBoxEntry {
+        margin-right: 10px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        background-color: #525252;
+        border-color: transparent;
+      }
+    }
+
+    SearchBoxSeparator {
+      background: #ababab;
+      min-height: 1px;
+      margin-bottom: 10px;
+    }
+  }
+
+  FirstPadding {
+    min-height: 10px;
   }
 }

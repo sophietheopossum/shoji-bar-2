@@ -1,4 +1,4 @@
-import { Gdk } from "ags/gtk4";
+import { Gdk } from "ags/gtk4"
 
 export class LayerState<T> {
   private map: WeakMap<Gdk.Monitor, T>

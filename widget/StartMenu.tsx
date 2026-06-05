@@ -1,20 +1,13 @@
 import { Astal, Gdk, Gtk } from "ags/gtk4"
-import { Accessor, createState, Setter } from "gnim"
+import { Accessor, createState } from "gnim"
 import { LayerState } from "../utils/LayerState"
 import app from "ags/gtk4/app"
 import GLib from "gi://GLib"
-import { animate, cubicBezier } from "../utils/animation"
 
 type StartMenuState = {
   isOpen: Accessor<boolean>
   setOpen: (open: boolean) => void
-
-  mounted: Accessor<boolean>
-  progress: Accessor<number>
 }
-
-const OPEN_EASING = cubicBezier(0.1, 1.1, 0.1, 1.1)
-const CLOSE_EASING = cubicBezier(0.3, -0.3, 0, 1)
 
 const LAYER_STATE = new LayerState<StartMenuState>()
 
@@ -22,8 +15,12 @@ export function StartMenuButton({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
   return (
     <button
       cssName="StartMenuButton"
-      class={(LAYER_STATE.then(gdkmonitor, state => state.isOpen(isOpen => isOpen ? "pressed" : "")))}
-      onClicked={() => LAYER_STATE.then(gdkmonitor, state => state.setOpen(!state.isOpen()))}
+      class={LAYER_STATE.then(gdkmonitor, (state) =>
+        state.isOpen((isOpen) => (isOpen ? "pressed" : "")),
+      )}
+      onClicked={() =>
+        LAYER_STATE.then(gdkmonitor, (state) => state.setOpen(!state.isOpen()))
+      }
     >
       <image file={`${SRC}/assets/arch-linux.svg`} />
     </button>
@@ -33,60 +30,55 @@ export function StartMenuButton({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
 export function StartMenuLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
   const [isOpen, setIsOpen] = createState(false)
   const [mounted, setMounted] = createState(false)
-  const [progress, setProgress] = createState(0)
 
-  let animationId: number | null = null
+  let closeTimeoutId: number | null = null
+  let openIdleId: number | null = null
 
-  const refreshRate = gdkmonitor.get_refresh_rate()
-  const hz = refreshRate > 0 ? refreshRate / 1000 : 60
-  const intervalMs = Math.max(1, Math.floor(1000 / hz))
+  function clearTimers() {
+    if (closeTimeoutId !== null) {
+      GLib.source_remove(closeTimeoutId)
+      closeTimeoutId = null
+    }
 
-  function stopAnimation() {
-    if (animationId !== null) {
-      GLib.source_remove(animationId)
-      animationId = null
+    if (openIdleId !== null) {
+      GLib.source_remove(openIdleId)
+      openIdleId = null
     }
   }
 
   function setOpen(open: boolean) {
-    stopAnimation()
-    setIsOpen(open)
+    clearTimers()
 
     if (open) {
       setMounted(true)
 
-      animationId = animate(
-        progress(),
-        1,
-        500,
-        intervalMs,
-        OPEN_EASING,
-        setProgress,
-        () => {
-          animationId = null
-        },
-      )
+      // mounted=true の反映後に open class を付ける
+      // これを分けないと transition が発火しないことがある
+      openIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+        openIdleId = null
+        setIsOpen(true)
+        return GLib.SOURCE_REMOVE
+      })
     } else {
-      animationId = animate(
-        progress(),
-        0,
-        500,
-        intervalMs,
-        CLOSE_EASING,
-        setProgress,
-        () => {
-          animationId = null
+      setIsOpen(false)
+
+      // CSS transition の終了後に window を消す
+      closeTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+        closeTimeoutId = null
+
+        // 途中で再度 open されていない場合だけ unmount
+        if (!isOpen()) {
           setMounted(false)
-        },
-      )
+        }
+
+        return GLib.SOURCE_REMOVE
+      })
     }
   }
 
   const states = {
     isOpen,
     setOpen,
-    mounted,
-    progress,
   }
 
   LAYER_STATE.set(gdkmonitor, states)
@@ -96,20 +88,52 @@ export function StartMenuLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
   const inner = (
     <box
       cssName="StartMenu"
-      css={progress.as((p) => `
-        opacity: ${p};
-        transform: translateY(${p * 40 - 40 + 10}px) translateX(10px);
-      `)}
+      class={isOpen((open) => (open ? "open" : "close"))}
       halign={Gtk.Align.START}
       valign={Gtk.Align.START}
     >
-      {/* menu contents */}
+      <box
+        orientation={Gtk.Orientation.VERTICAL}
+        halign={Gtk.Align.FILL}
+        hexpand
+      >
+        <box cssName={"FirstPadding"} />
+        <box
+          cssName={"SearchBox"}
+          orientation={Gtk.Orientation.VERTICAL}
+          valign={Gtk.Align.START}
+          halign={Gtk.Align.FILL}
+          hexpand
+        >
+          <box
+            cssName={"SearchBoxInner"}
+            orientation={Gtk.Orientation.HORIZONTAL}
+            halign={Gtk.Align.FILL}
+            hexpand
+          >
+            <image
+              cssName={"SearchBoxIcon"}
+              file={`${SRC}/assets/search.svg`}
+            />
+            <entry
+              cssName={"SearchBoxEntry"}
+              placeholderText={" Search..."}
+              halign={Gtk.Align.FILL}
+              hexpand
+            />
+          </box>
+          <Gtk.Separator
+            cssName={"SearchBoxSeparator"}
+            orientation={Gtk.Orientation.HORIZONTAL}
+          />
+          <label label={"App list here"} />
+        </box>
+      </box>
     </box>
   ) as Gtk.Box
 
   const window = (
     <window
-      visible={mounted}
       name="startmenulayer"
       class="StartMenuLayer"
       gdkmonitor={gdkmonitor}
@@ -117,6 +141,7 @@ export function StartMenuLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
       exclusivity={Astal.Exclusivity.NORMAL}
       anchor={TOP | LEFT | RIGHT | BOTTOM}
       application={app}
+      visible={mounted}
     >
       {inner}
     </window>
