@@ -1,5 +1,5 @@
 $bg-color: #151515;
-$bg-up-color: #424242;
+$bg-up-color: #2b2b2b;
 $accent-color: #88cddd;
 $text-active-color: #f5f5f5;
 $text-inactive-color: #c0c0c0;
@@ -26,6 +26,31 @@ window.Bar {
     min-width: 26px;
     min-height: 26px;
     background: $pressed-button-color;
+  }
+
+  ClockButton {
+    border-radius: 8px;
+    min-height: 26px;
+    padding: 0 12px;
+    background: transparent;
+
+    ClockButtonLabel {
+      color: $text-active-color;
+      font-size: 13px;
+      font-feature-settings: "tnum";
+    }
+  }
+
+  ClockButton:hover {
+    background: #2a2a2a;
+  }
+
+  ClockButton.pressed {
+    background: $accent-color;
+
+    ClockButtonLabel {
+      color: $bg-color;
+    }
   }
 }
 
@@ -245,5 +270,218 @@ window.StartMenuLayer {
 
   FirstPadding {
     min-height: 10px;
+  }
+}
+
+window.ClockMenuLayer {
+  background: transparent;
+  color: $text-active-color;
+
+  // 高さ(475px)を固定し、閉じる移動量を実高さに一致させることで
+  // open/close が同じ cubic-bezier で対称に見えるようにする
+  // (translateY に % は使えないため StartMenu と同じく実寸を指定する)
+  ClockMenu {
+    background: $bg-color;
+    border-radius: 10px;
+    min-width: 340px;
+    min-height: 475px;
+    transform: translateY(-475px);
+  }
+
+  ClockMenu.open {
+    transform: translateY(-16px);
+
+    transition: transform 500ms cubic-bezier(0.1, 0.9, 0.2, 1);
+  }
+
+  ClockMenu.close {
+    transform: translateY(-475px);
+
+    transition: transform 500ms cubic-bezier(0.1, 0.9, 0.2, 1);
+  }
+
+  FirstPadding {
+    min-height: 10px;
+  }
+
+  // 上の島: 日付 + 時計 + タイムゾーン
+  ClockIsland {
+    background: $bg-up-color;
+    border-radius: 10px;
+    margin: 10px 10px 0 10px;
+    padding: 16px 10px;
+
+    ClockDate {
+      color: $text-inactive-color;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+
+    ClockTime {
+      color: $text-active-color;
+      font-size: 40px;
+      font-weight: bold;
+      font-feature-settings: "tnum";
+    }
+
+    ClockTimezone {
+      color: $text-inactive-color;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+  }
+
+  // 下の島: カレンダー
+  CalendarIsland {
+    background: $bg-up-color;
+    border-radius: 10px;
+    margin: 10px;
+    padding: 8px;
+  }
+
+  // カレンダーはグローバルテーマの影響を受けないよう全ノードを明示指定する
+  // ノード構成:
+  //   Calendar(.view)
+  //     header.horizontal -> button.image-button > image, stack.month > label, label.year
+  //     grid.horizontal   -> label.day-name / label.week-number / label.day-number[.other-month][.today]
+  Calendar {
+    background: transparent;
+    color: $text-active-color;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    outline: none;
+
+    // --- ヘッダ ---
+    header {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      margin-bottom: 6px;
+
+      label {
+        color: $text-active-color;
+        font-size: 15px;
+        font-weight: bold;
+        background: transparent;
+      }
+
+      label.year {
+        color: $text-active-color;
+      }
+
+      stack.month {
+        background: transparent;
+
+        label {
+          color: $text-active-color;
+        }
+      }
+
+      button.image-button {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        outline: none;
+        min-width: 28px;
+        min-height: 28px;
+        padding: 0;
+        margin: 0 1px;
+        border-radius: 6px;
+        color: $text-active-color;
+
+        image {
+          color: $text-active-color;
+          -gtk-icon-size: 16px;
+        }
+      }
+
+      button.image-button:hover {
+        background: #525252;
+      }
+
+      button.image-button:active {
+        background: #5f5f5f;
+      }
+    }
+
+    // --- グリッド ---
+    grid {
+      background: transparent;
+
+      label {
+        color: $text-active-color;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        outline: none;
+        min-width: 34px;
+        min-height: 30px;
+        padding: 2px;
+        margin: 1px;
+        border-radius: 8px;
+        font-size: 13px;
+      }
+
+      // 曜日見出し
+      label.day-name {
+        color: $text-inactive-color;
+        font-weight: bold;
+        font-size: 12px;
+        background: transparent;
+      }
+
+      // 週番号(非表示にしているが念のため)
+      label.week-number {
+        color: $text-inactive-color;
+        font-size: 11px;
+        background: transparent;
+      }
+
+      // 日付セル
+      label.day-number {
+        color: $text-active-color;
+        background: transparent;
+      }
+
+      label.day-number:hover {
+        background: #525252;
+        color: $text-active-color;
+      }
+
+      // 当月外の日付
+      label.day-number.other-month {
+        color: rgba(245, 245, 245, 0.28);
+        background: transparent;
+      }
+
+      label.day-number.other-month:hover {
+        background: #4a4a4a;
+        color: rgba(245, 245, 245, 0.5);
+      }
+
+      // 今日
+      label.day-number.today {
+        background: #5a5a5a;
+        color: $text-active-color;
+        font-weight: bold;
+      }
+
+      label.day-number.today:hover {
+        background: #6a6a6a;
+      }
+
+      // 選択中の日付
+      label.day-number:selected {
+        background: $accent-color;
+        color: $bg-color;
+        font-weight: bold;
+      }
+
+      label.day-number.today:selected {
+        background: $accent-color;
+        color: $bg-color;
+      }
+    }
   }
 }

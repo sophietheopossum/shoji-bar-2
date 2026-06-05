@@ -8,6 +8,7 @@ import {
   onCleanup,
 } from "gnim"
 import { LayerState } from "../utils/LayerState"
+import { isPointInsideWidget } from "../utils/pointInside"
 import app from "ags/gtk4/app"
 import { execAsync } from "ags/process"
 import GLib from "gi://GLib"
@@ -426,7 +427,7 @@ export function StartMenuLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
   outsideClick.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
 
   outsideClick.connect("pressed", (_g, _n, x, y) => {
-    if (!inner.contains(x, y)) {
+    if (!isPointInsideWidget(window, inner, x, y)) {
       states.setOpen(false)
     }
   })

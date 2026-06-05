@@ -3,6 +3,7 @@ import style from "./style.scss"
 import Bar from "./widget/Bar"
 import { createBinding, For, This } from "gnim"
 import { StartMenuLayer } from "./widget/StartMenu"
+import { ClockMenuLayer } from "./widget/ClockMenu"
 
 app.start({
   css: style,
@@ -14,6 +15,7 @@ app.start({
         {(monitor) => (
           <This this={app}>
             <StartMenuLayer gdkmonitor={monitor} />
+            <ClockMenuLayer gdkmonitor={monitor} />
             <Bar gdkmonitor={monitor} />
           </This>
         )}

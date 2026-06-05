@@ -1,6 +1,7 @@
 import app from "ags/gtk4/app"
 import { Astal, Gdk } from "ags/gtk4"
 import { StartMenuButton } from "./StartMenu"
+import { ClockButton } from "./ClockMenu"
 
 export default function Bar({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
   const { TOP, LEFT, RIGHT } = Astal.WindowAnchor
@@ -16,10 +17,16 @@ export default function Bar({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
       anchor={TOP | LEFT | RIGHT}
       application={app}
     >
-      <box cssName="parentbox">
-        <box widthRequest={1} />
-        <StartMenuButton gdkmonitor={gdkmonitor} />
-      </box>
+      <centerbox cssName="parentbox">
+        <box $type="start">
+          <box widthRequest={1} />
+          <StartMenuButton gdkmonitor={gdkmonitor} />
+        </box>
+        <box $type="center">
+          <ClockButton gdkmonitor={gdkmonitor} />
+        </box>
+        <box $type="end" />
+      </centerbox>
     </window>
   )
 }
