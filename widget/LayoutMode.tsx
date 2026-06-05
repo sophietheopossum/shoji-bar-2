@@ -1,0 +1,32 @@
+import { Gdk, Gtk } from "ags/gtk4"
+import { createComputed } from "gnim"
+import { view, monitorView, activeWorkspace } from "../utils/workspaceState"
+
+// 現在のワークスペースがタイル型かフローティング型かを表示するラベル。
+// "Tiled" / "Float"(monospace)とアイコン(assets/tiled.svg, assets/float.svg)。
+export function LayoutMode({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
+  const connector = gdkmonitor.get_connector()
+
+  const tiled = createComputed(() => {
+    const monitor = monitorView(view(), connector)
+    return activeWorkspace(monitor)?.isTiled ?? false
+  })
+
+  return (
+    <box
+      cssName="LayoutMode"
+      halign={Gtk.Align.START}
+      valign={Gtk.Align.CENTER}
+    >
+      <image
+        cssName="LayoutModeIcon"
+        file={tiled((t) => `${SRC}/assets/${t ? "tiled" : "float"}.svg`)}
+        pixelSize={16}
+      />
+      <label
+        cssName="LayoutModeLabel"
+        label={tiled((t) => (t ? "Tiled" : "Float"))}
+      />
+    </box>
+  )
+}

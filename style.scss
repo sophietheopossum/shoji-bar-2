@@ -52,6 +52,69 @@ window.Bar {
       color: $bg-color;
     }
   }
+
+  LayoutMode {
+    margin-left: 16px;
+
+    LayoutModeIcon {
+      margin-right: 6px;
+    }
+
+    LayoutModeLabel {
+      color: $text-active-color;
+      font-family: monospace;
+      font-size: 13px;
+    }
+  }
+
+  Workspaces {
+    margin-left: 16px;
+
+    Workspace {
+      min-width: 22px;
+      min-height: 22px;
+      margin: 2px;
+      padding: 0;
+      border-radius: 6px;
+      border-style: solid;
+      border-width: 1px;
+      border-color: transparent;
+      background: #2a2a2a;
+
+      WorkspaceLabel {
+        color: $text-inactive-color;
+        font-size: 12px;
+        font-feature-settings: "tnum";
+        margin-left: 1px;
+      }
+    }
+
+    // ウィンドウがあるワークスペースは少し明るく
+    Workspace.occupied {
+
+      WorkspaceLabel {
+        color: $text-active-color;
+      }
+    }
+
+    Workspace:hover {
+      background: #4a4a4a;
+    }
+
+    // 現在のワークスペース
+    Workspace.active {
+      background: transparent;
+      border-color: #c0c0c0;
+
+      WorkspaceLabel {
+        color: $text-active-color;
+      }
+    }
+
+    Workspace.active:hover {
+      background: #4a4a4a;
+    }
+  }
 }
 
 window.StartMenuLayer {
