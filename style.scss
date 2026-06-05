@@ -153,6 +153,96 @@ window.StartMenuLayer {
     }
   }
 
+  // ユーザー情報の島
+  UserBox {
+    background: $bg-up-color;
+    border-radius: 10px;
+    margin: 0 10px 10px 10px;
+    padding: 10px;
+
+    UserIcon {
+      min-width: 48px;
+      min-height: 48px;
+      border-radius: 24px;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      margin-right: 12px;
+    }
+
+    UserText {
+      UserName {
+        color: $text-active-color;
+        font-size: 15px;
+        font-weight: bold;
+      }
+      HostName {
+        color: $text-inactive-color;
+        font-size: 12px;
+      }
+    }
+
+    LockButton,
+    PowerButton {
+      background: transparent;
+      border-radius: 8px;
+      min-width: 36px;
+      min-height: 36px;
+      padding: 0;
+      margin-left: 4px;
+    }
+
+    LockButton:hover,
+    PowerButton:hover {
+      background: #525252;
+    }
+
+    // menubutton 内部に出る矢印やトグル装飾を消す
+    PowerButton > * {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+    }
+  }
+
+  PowerPopover {
+    background: transparent;
+
+    > contents {
+      background: $bg-up-color;
+      border-radius: 10px;
+      padding: 6px;
+      border: 1px solid #5a5a5a;
+    }
+
+    > arrow {
+      background: transparent;
+      border: none;
+    }
+
+    PowerMenu {
+      PowerMenuItem {
+        background: transparent;
+        border-radius: 6px;
+        padding: 6px 16px;
+        min-height: 0;
+
+        label {
+          color: $text-active-color;
+          font-size: 14px;
+        }
+      }
+
+      PowerMenuItem:hover {
+        background: $accent-color;
+
+        label {
+          color: $bg-color;
+        }
+      }
+    }
+  }
+
   FirstPadding {
     min-height: 10px;
   }

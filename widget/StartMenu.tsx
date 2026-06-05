@@ -9,6 +9,7 @@ import {
 } from "gnim"
 import { LayerState } from "../utils/LayerState"
 import app from "ags/gtk4/app"
+import { execAsync } from "ags/process"
 import GLib from "gi://GLib"
 import Pango from "gi://Pango"
 import AstalApps from "gi://AstalApps"
@@ -48,6 +49,19 @@ export function StartMenuLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
 
   // 検索文字列に応じてアプリ一覧をリアルタイムに導出
   const results = createComputed(() => apps.fuzzy_query(search()))
+
+  // ユーザー情報(島の表示用)
+  const homeDir = GLib.get_home_dir()
+  const realName = GLib.get_real_name()
+  const userName =
+    realName && realName !== "Unknown" ? realName : GLib.get_user_name()
+  const hostName = GLib.get_host_name()
+
+  // 電源系アクション。実行後はメニューを閉じる
+  function runPower(command: string) {
+    execAsync(["bash", "-c", command]).catch((err) => console.error(err))
+    setOpen(false)
+  }
 
   let entryRef: Gtk.Entry | null = null
   let scrolledRef: Gtk.ScrolledWindow | null = null
@@ -288,6 +302,105 @@ export function StartMenuLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
               </For>
             </box>
           </scrolledwindow>
+        </box>
+        <box
+          cssName={"UserBox"}
+          orientation={Gtk.Orientation.HORIZONTAL}
+          halign={Gtk.Align.FILL}
+          valign={Gtk.Align.END}
+          hexpand
+        >
+          <box
+            cssName={"UserIcon"}
+            css={`background-image: url("file://${homeDir}/Pictures/icon.png");`}
+            valign={Gtk.Align.CENTER}
+          />
+          <box
+            cssName={"UserText"}
+            orientation={Gtk.Orientation.VERTICAL}
+            valign={Gtk.Align.CENTER}
+            halign={Gtk.Align.START}
+            hexpand
+          >
+            <label
+              cssName={"UserName"}
+              label={userName}
+              halign={Gtk.Align.START}
+              ellipsize={Pango.EllipsizeMode.END}
+            />
+            <label
+              cssName={"HostName"}
+              label={hostName}
+              halign={Gtk.Align.START}
+              ellipsize={Pango.EllipsizeMode.END}
+            />
+          </box>
+          <button
+            cssName={"LockButton"}
+            valign={Gtk.Align.CENTER}
+            onClicked={() => runPower("loginctl lock-session")}
+          >
+            <image
+              cssName={"LockIcon"}
+              file={`${SRC}/assets/lock.svg`}
+              pixelSize={20}
+            />
+          </button>
+          <menubutton
+            cssName={"PowerButton"}
+            valign={Gtk.Align.CENTER}
+            $={(self) => {
+              const icon = (
+                <image
+                  cssName={"PowerIcon"}
+                  file={`${SRC}/assets/power.svg`}
+                  pixelSize={20}
+                />
+              ) as Gtk.Widget
+              self.set_child(icon)
+            }}
+          >
+            <popover cssName={"PowerPopover"} hasArrow={false}>
+              <box
+                cssName={"PowerMenu"}
+                orientation={Gtk.Orientation.VERTICAL}
+                halign={Gtk.Align.FILL}
+              >
+                <button
+                  cssName={"PowerMenuItem"}
+                  onClicked={() => runPower("systemctl poweroff")}
+                >
+                  <label
+                    label={"Power Off"}
+                    halign={Gtk.Align.START}
+                    hexpand
+                  />
+                </button>
+                <button
+                  cssName={"PowerMenuItem"}
+                  onClicked={() => runPower("systemctl reboot")}
+                >
+                  <label
+                    label={"Restart"}
+                    halign={Gtk.Align.START}
+                    hexpand
+                  />
+                </button>
+                <button
+                  cssName={"PowerMenuItem"}
+                  onClicked={() =>
+                    runPower(`loginctl terminate-user "${GLib.get_user_name()}"`)
+                  }
+                >
+                  <label
+                    label={"Logout"}
+                    halign={Gtk.Align.START}
+                    hexpand
+                  />
+                </button>
+              </box>
+            </popover>
+          </menubutton>
         </box>
       </box>
     </box>
