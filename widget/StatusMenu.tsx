@@ -15,14 +15,19 @@ import { isPointInsideWidget } from "../utils/pointInside"
 import {
   accessPointRequiresPassword,
   accessPointSecurity,
-  bluetooth,
+  bluetoothConnect,
   bluetoothDevices,
+  bluetoothDisconnect,
   bluetoothEnabled,
   bluetoothPrimary,
+  bluetoothScanning,
   brightness,
   brightnessAvailable,
   dismissAllNotifications,
+  focusBluetoothPolling,
   focusWifiPolling,
+  setBluetoothEnabled,
+  triggerBluetoothScan,
   formatMprisTime,
   mediaArtist,
   mediaArtUrl,
@@ -42,8 +47,6 @@ import {
   setWifiEnabled,
   speakerMute,
   speakerVolume,
-  toggleBluetooth,
-  toggleBluetoothDevice,
   toggleDnd,
   toggleSpeakerMute,
   triggerWifiScan,
@@ -69,12 +72,21 @@ type Submenu = "wifi" | "bluetooth" | "ppd" | "notifications"
 // バー上のトリガーボタン: 主要 7 ステータスのアイコンを横並びで表示
 // =============================================================================
 export function StatusButton({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
+  // menu 開いている間はボタン全体が accent 色になるので、白アイコンだと
+  // 見えない。pressed 中は -dark 版に差し替える。
+  // LayerState.then は state 未登録時に undefined を返すので、その場合は
+  // 常に false 扱い (= 非 pressed = 白アイコン)。
+  const isPressed: Accessor<boolean> =
+    LAYER_STATE.then(gdkmonitor, (state) =>
+      state.isOpen((isOpen) => isOpen),
+    ) ?? createComputed(() => false)
+  const suffix = (base: string) =>
+    createComputed(() => `${SRC}/assets/${base}${isPressed() ? "-dark" : ""}.svg`)
+
   return (
     <button
       cssName="StatusButton"
-      class={LAYER_STATE.then(gdkmonitor, (state) =>
-        state.isOpen((isOpen) => (isOpen ? "pressed" : "")),
-      )}
+      class={isPressed((p) => (p ? "pressed" : ""))}
       onClicked={() =>
         LAYER_STATE.then(gdkmonitor, (state) => state.setOpen(!state.isOpen()))
       }
@@ -83,51 +95,56 @@ export function StatusButton({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
         <image
           cssName="StatusButtonIcon"
           file={createComputed(() => {
-            if (!wifiEnabled()) return `${SRC}/assets/wifi-off.svg`
+            const dark = isPressed() ? "-dark" : ""
+            if (!wifiEnabled()) return `${SRC}/assets/wifi-off${dark}.svg`
             const s = wifiStrength()
-            if (s >= 70) return `${SRC}/assets/wifi-full.svg`
-            if (s >= 40) return `${SRC}/assets/wifi-midium.svg`
-            if (s >= 10) return `${SRC}/assets/wifi-low.svg`
-            return `${SRC}/assets/wifi-off.svg`
+            if (s >= 70) return `${SRC}/assets/wifi-full${dark}.svg`
+            if (s >= 40) return `${SRC}/assets/wifi-midium${dark}.svg`
+            if (s >= 10) return `${SRC}/assets/wifi-low${dark}.svg`
+            return `${SRC}/assets/wifi-off${dark}.svg`
           })}
           pixelSize={14}
         />
         <image
           cssName="StatusButtonIcon"
-          class={bluetoothEnabled((on) => (on ? "active" : ""))}
-          file={`${SRC}/assets/bluetooth.svg`}
+          // BT が off のときはアイコン自体を消して on/off の判別を付ける。
+          visible={bluetoothEnabled}
+          file={suffix("bluetooth")}
           pixelSize={14}
         />
         <image
           cssName="StatusButtonIcon"
-          file={ppdActive((p) => `${SRC}/assets/${ppdIconNameFor(p)}.svg`)}
-          pixelSize={14}
-        />
-        <image
-          cssName="StatusButtonIcon"
-          file={notifDnd(
-            (dnd) =>
-              `${SRC}/assets/${dnd ? "bell-no" : "bell"}.svg`,
+          file={createComputed(
+            () =>
+              `${SRC}/assets/${ppdIconNameFor(ppdActive())}${isPressed() ? "-dark" : ""}.svg`,
           )}
           pixelSize={14}
         />
         <image
           cssName="StatusButtonIcon"
-          file={`${SRC}/assets/music.svg`}
-          pixelSize={14}
-        />
-        <image
-          cssName="StatusButtonIcon"
-          file={createComputed(() =>
-            speakerMute() || speakerVolume() === 0
-              ? `${SRC}/assets/volume-off.svg`
-              : `${SRC}/assets/volume.svg`,
+          file={createComputed(
+            () =>
+              `${SRC}/assets/${notifDnd() ? "bell-no" : "bell"}${isPressed() ? "-dark" : ""}.svg`,
           )}
           pixelSize={14}
         />
         <image
           cssName="StatusButtonIcon"
-          file={`${SRC}/assets/sun.svg`}
+          file={suffix("music")}
+          pixelSize={14}
+        />
+        <image
+          cssName="StatusButtonIcon"
+          file={createComputed(() => {
+            const muted = speakerMute() || speakerVolume() === 0
+            const base = muted ? "volume-off" : "volume"
+            return `${SRC}/assets/${base}${isPressed() ? "-dark" : ""}.svg`
+          })}
+          pixelSize={14}
+        />
+        <image
+          cssName="StatusButtonIcon"
+          file={suffix("sun")}
           pixelSize={14}
         />
       </box>
@@ -283,8 +300,8 @@ function QuickIsland(
             cssName="QuickButtonArrow"
             file={createComputed(() =>
               activeSubmenu() === key
-                ? `${SRC}/assets/angle-down.svg`
-                : `${SRC}/assets/angle-right.svg`,
+                ? `${SRC}/assets/angle-down-dark.svg`
+                : `${SRC}/assets/angle-right-dark.svg`,
             )}
             pixelSize={12}
           />
@@ -293,15 +310,17 @@ function QuickIsland(
     ) as Gtk.Widget
   }
 
+  // QuickButton 内のアイコンは active 時に dark テーマ (アクセントカラー背景)
+  // 上に乗る前提なので、白では見えにくい。専用の -dark.svg を使う。
   const wifiBtn = quickButton(
     "wifi",
     createComputed(() => {
-      if (!wifiEnabled()) return `${SRC}/assets/wifi-off.svg`
+      if (!wifiEnabled()) return `${SRC}/assets/wifi-off-dark.svg`
       const s = wifiStrength()
-      if (s >= 70) return `${SRC}/assets/wifi-full.svg`
-      if (s >= 40) return `${SRC}/assets/wifi-midium.svg`
-      if (s >= 10) return `${SRC}/assets/wifi-low.svg`
-      return `${SRC}/assets/wifi-off.svg`
+      if (s >= 70) return `${SRC}/assets/wifi-full-dark.svg`
+      if (s >= 40) return `${SRC}/assets/wifi-midium-dark.svg`
+      if (s >= 10) return `${SRC}/assets/wifi-low-dark.svg`
+      return `${SRC}/assets/wifi-off-dark.svg`
     }),
     createComputed(() => {
       if (!wifiEnabled()) return "Off"
@@ -312,14 +331,14 @@ function QuickIsland(
 
   const btBtn = quickButton(
     "bluetooth",
-    createComputed(() => `${SRC}/assets/bluetooth.svg`),
+    createComputed(() => `${SRC}/assets/bluetooth-dark.svg`),
     bluetoothPrimary,
     bluetoothEnabled,
   )
 
   const ppdBtn = quickButton(
     "ppd",
-    ppdActive((p) => `${SRC}/assets/${ppdIconNameFor(p)}.svg`),
+    ppdActive((p) => `${SRC}/assets/${ppdIconNameFor(p)}-dark.svg`),
     ppdActive(ppdLabel),
     createComputed(() => true),
   )
@@ -327,7 +346,7 @@ function QuickIsland(
   const notifBtn = quickButton(
     "notifications",
     notifDnd(
-      (dnd) => `${SRC}/assets/${dnd ? "bell-no" : "bell"}.svg`,
+      (dnd) => `${SRC}/assets/${dnd ? "bell-no" : "bell"}-dark.svg`,
     ),
     notifDnd((dnd) => (dnd ? "Silent" : "Notifications")),
     createComputed(() => !notifDnd()),
@@ -336,11 +355,11 @@ function QuickIsland(
   return (
     <box cssName="QuickIsland" orientation={Gtk.Orientation.VERTICAL}>
       <box cssName="QuickGrid" orientation={Gtk.Orientation.VERTICAL} spacing={6}>
-        <box spacing={6}>
+        <box spacing={6} homogeneous>
           {wifiBtn}
           {btBtn}
         </box>
-        <box spacing={6}>
+        <box spacing={6} homogeneous>
           {ppdBtn}
           {notifBtn}
         </box>
@@ -404,30 +423,6 @@ function buildSubmenuContent(sub: Submenu): Gtk.Widget {
     case "notifications":
       return notificationsSubmenu()
   }
-}
-
-function rowToggle(
-  label: string,
-  active: boolean,
-  onClick: () => void,
-): Gtk.Widget {
-  return (
-    <button
-      cssName="SubmenuRow"
-      class={active ? "active" : ""}
-      onClicked={onClick}
-    >
-      <box spacing={8}>
-        <label
-          cssName="SubmenuRowLabel"
-          halign={Gtk.Align.START}
-          hexpand
-          ellipsize={3}
-          label={label}
-        />
-      </box>
-    </button>
-  ) as Gtk.Widget
 }
 
 // =============================================================================
@@ -808,72 +803,245 @@ function buildWifiError(
   ) as Gtk.Widget
 }
 
+type BtView =
+  | { kind: "list" }
+  | { kind: "connecting"; mac: string; name: string }
+  | { kind: "error"; mac: string; name: string; message: string }
+
 function bluetoothSubmenu(): Gtk.Widget {
-  const toggle = rowToggle(
-    bluetoothEnabled() ? "Bluetooth: On" : "Bluetooth: Off",
-    bluetoothEnabled(),
-    toggleBluetooth,
-  )
-  if (bluetoothEnabled() && bluetooth.adapter) {
-    try {
-      bluetooth.adapter.start_discovery()
-    } catch {
-      // ignore
-    }
-  }
+  const [btView, setBtView] = createState<BtView>({ kind: "list" })
+
+  // 表示中は polling 頻度を上げる。
+  const releaseFocus = focusBluetoothPolling()
+  onCleanup(releaseFocus)
+
+  // 表示時にスキャンを開始 (現在 off / 既にスキャン中なら no-op)。
+  void triggerBluetoothScan()
+
+  // ON/OFF トグル。Wifi と同じ class 名で同一スタイルを共有。
+  const toggleRow = (
+    <box cssName="WifiToggleRow" spacing={6}>
+      <label
+        cssName="WifiToggleLabel"
+        halign={Gtk.Align.START}
+        hexpand
+        label={bluetoothEnabled((on) => (on ? "Bluetooth" : "Bluetooth (off)"))}
+      />
+      <switch
+        cssName="WifiSwitch"
+        valign={Gtk.Align.CENTER}
+        active={bluetoothEnabled}
+        onNotifyActive={(self) => {
+          const desired = self.active
+          if (desired !== bluetoothEnabled()) {
+            void setBluetoothEnabled(desired)
+          }
+        }}
+      />
+    </box>
+  ) as Gtk.Widget
+
+  // 操作行: rescan のみ (BT は同時複数接続を許すので global disconnect は出さない)。
+  const actionsRow = (
+    <box cssName="WifiActionsRow" spacing={6} halign={Gtk.Align.END}>
+      <button
+        cssName="WifiActionButton"
+        sensitive={createComputed(
+          () => bluetoothEnabled() && !bluetoothScanning(),
+        )}
+        onClicked={() => void triggerBluetoothScan()}
+      >
+        <label
+          label={bluetoothScanning((s) => (s ? "Scanning..." : "Rescan"))}
+        />
+      </button>
+    </box>
+  ) as Gtk.Widget
+
+  const content = (
+    <box
+      cssName="WifiContent"
+      orientation={Gtk.Orientation.VERTICAL}
+      spacing={4}
+      $={(self) => {
+        let dispose: (() => void) | null = null
+        const rebuild = () => {
+          if (dispose) {
+            dispose()
+            dispose = null
+          }
+          let child = self.get_first_child()
+          while (child) {
+            const next = child.get_next_sibling()
+            self.remove(child)
+            child = next
+          }
+          createRoot((d) => {
+            dispose = d
+            const v = btView()
+            if (v.kind === "list") {
+              self.append(buildBtList(setBtView))
+            } else if (v.kind === "connecting") {
+              self.append(buildBtConnecting(v))
+            } else if (v.kind === "error") {
+              self.append(buildBtError(v, setBtView))
+            }
+          })
+        }
+        rebuild()
+        onCleanup(btView.subscribe(rebuild))
+        onCleanup(bluetoothDevices.subscribe(rebuild))
+        onCleanup(bluetoothEnabled.subscribe(rebuild))
+      }}
+    />
+  ) as Gtk.Widget
+
+  return (
+    <box orientation={Gtk.Orientation.VERTICAL} spacing={6}>
+      {toggleRow}
+      {actionsRow}
+      {content}
+    </box>
+  ) as Gtk.Widget
+}
+
+function buildBtList(setBtView: (v: BtView) => void): Gtk.Widget {
   const list = (
     <box cssName="SubmenuList" orientation={Gtk.Orientation.VERTICAL} />
   ) as Gtk.Box
-  let dispose: (() => void) | null = null
-  const rebuild = () => {
-    if (dispose) {
-      dispose()
-      dispose = null
-    }
-    let child = list.get_first_child()
-    while (child) {
-      const next = child.get_next_sibling()
-      list.remove(child)
-      child = next
-    }
-    createRoot((d) => {
-      dispose = d
-      const devs = bluetoothDevices()
-      for (const dev of devs) {
-        list.append(
-          (
-            <button
-              cssName="SubmenuRow"
-              class={dev.connected ? "active" : ""}
-              onClicked={() => toggleBluetoothDevice(dev)}
-            >
-              <box spacing={8}>
-                <label
-                  cssName="SubmenuRowLabel"
-                  halign={Gtk.Align.START}
-                  hexpand
-                  ellipsize={3}
-                  label={dev.name ?? dev.alias ?? dev.address ?? "(unknown)"}
-                />
-                <label
-                  cssName="SubmenuRowSub"
-                  halign={Gtk.Align.END}
-                  label={dev.connected ? "Connected" : dev.paired ? "Paired" : ""}
-                />
-              </box>
-            </button>
-          ) as Gtk.Widget,
-        )
-      }
-    })
-  }
-  rebuild()
-  onCleanup(bluetoothDevices.subscribe(rebuild))
 
+  if (!bluetoothEnabled()) {
+    list.append(
+      (
+        <label
+          cssName="SubmenuEmpty"
+          halign={Gtk.Align.CENTER}
+          label="Bluetooth is off"
+        />
+      ) as Gtk.Widget,
+    )
+    return list
+  }
+
+  const devs = bluetoothDevices()
+  if (devs.length === 0) {
+    list.append(
+      (
+        <label
+          cssName="SubmenuEmpty"
+          halign={Gtk.Align.CENTER}
+          label="Scanning..."
+        />
+      ) as Gtk.Widget,
+    )
+    return list
+  }
+
+  for (const dev of devs) {
+    const isConnected = dev.connected
+    const status = isConnected
+      ? "Connected"
+      : dev.paired
+        ? "Paired"
+        : "Available"
+
+    list.append(
+      (
+        <button
+          cssName="SubmenuRow"
+          class={isConnected ? "active" : ""}
+          onClicked={() => {
+            if (isConnected) {
+              void bluetoothDisconnect(dev.mac)
+              return
+            }
+            setBtView({ kind: "connecting", mac: dev.mac, name: dev.name })
+            bluetoothConnect(dev.mac).then((res) => {
+              if (res.ok) {
+                setBtView({ kind: "list" })
+              } else {
+                setBtView({
+                  kind: "error",
+                  mac: dev.mac,
+                  name: dev.name,
+                  message: res.message ?? "Failed",
+                })
+              }
+            })
+          }}
+        >
+          <box spacing={8}>
+            <label
+              cssName="SubmenuRowLabel"
+              halign={Gtk.Align.START}
+              hexpand
+              ellipsize={3}
+              label={dev.name}
+            />
+            <label
+              cssName="SubmenuRowSub"
+              halign={Gtk.Align.END}
+              label={status}
+            />
+          </box>
+        </button>
+      ) as Gtk.Widget,
+    )
+  }
+
+  return list
+}
+
+function buildBtConnecting(
+  v: Extract<BtView, { kind: "connecting" }>,
+): Gtk.Widget {
   return (
-    <box orientation={Gtk.Orientation.VERTICAL} spacing={2}>
-      {toggle}
-      {list}
+    <box
+      cssName="WifiConnecting"
+      orientation={Gtk.Orientation.VERTICAL}
+      halign={Gtk.Align.CENTER}
+      valign={Gtk.Align.CENTER}
+      spacing={6}
+    >
+      <Gtk.Spinner spinning />
+      <label
+        cssName="WifiConnectingLabel"
+        label={`Connecting to "${v.name}"...`}
+      />
+    </box>
+  ) as Gtk.Widget
+}
+
+function buildBtError(
+  v: Extract<BtView, { kind: "error" }>,
+  setBtView: (v: BtView) => void,
+): Gtk.Widget {
+  return (
+    <box
+      cssName="WifiErrorForm"
+      orientation={Gtk.Orientation.VERTICAL}
+      spacing={6}
+    >
+      <label
+        cssName="WifiFormHeading"
+        halign={Gtk.Align.START}
+        label={`Failed to connect to "${v.name}"`}
+      />
+      <label
+        cssName="WifiFormError"
+        halign={Gtk.Align.START}
+        ellipsize={3}
+        maxWidthChars={48}
+        label={v.message}
+      />
+      <box halign={Gtk.Align.END} spacing={6}>
+        <button
+          cssName="WifiFormCancel"
+          onClicked={() => setBtView({ kind: "list" })}
+        >
+          <label label="Back" />
+        </button>
+      </box>
     </box>
   ) as Gtk.Widget
 }
@@ -1519,14 +1687,20 @@ function MediaIsland(): Gtk.Widget {
     <image cssName="MediaArt" pixelSize={ART_SIZE_PX} />
   ) as Gtk.Image
 
+  // art が無い / 読み込み失敗時のフォールバック画像。空欄にすると枠だけ黒く
+  // 残ってレイアウトが崩れて見えるので、アセットの music アイコンを置く。
+  function applyFallback() {
+    artImage.set_from_file(`${SRC}/assets/music.svg`)
+  }
+
   function applyArt(file: Gio.File | null) {
     if (!file) {
-      artImage.clear()
+      applyFallback()
       return
     }
     const path = file.get_path()
     if (!path) {
-      artImage.clear()
+      applyFallback()
       return
     }
     try {
@@ -1543,11 +1717,11 @@ function MediaIsland(): Gtk.Widget {
       if (pixbuf) {
         artImage.set_from_paintable(Gdk.Texture.new_for_pixbuf(pixbuf))
       } else {
-        artImage.clear()
+        applyFallback()
       }
     } catch (err) {
       console.error("[status] media art load failed:", err)
-      artImage.clear()
+      applyFallback()
     }
   }
   applyArt(artFile())
