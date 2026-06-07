@@ -6,6 +6,7 @@ import { StartMenuLayer } from "./widget/StartMenu"
 import { ClockMenuLayer } from "./widget/ClockMenu"
 import { WallpaperBackground, WallpaperLayer } from "./widget/Wallpaper"
 import { DockWindow } from "./widget/Dock"
+import { StatusMenuLayer } from "./widget/StatusMenu"
 
 app.start({
   css: style,
@@ -20,6 +21,7 @@ app.start({
             <StartMenuLayer gdkmonitor={monitor} />
             <ClockMenuLayer gdkmonitor={monitor} />
             <WallpaperLayer gdkmonitor={monitor} />
+            <StatusMenuLayer gdkmonitor={monitor} />
             <Bar gdkmonitor={monitor} />
             <DockWindow gdkmonitor={monitor} />
           </This>
