@@ -5,6 +5,7 @@ import AstalPowerProfiles from "gi://AstalPowerProfiles"
 import AstalNotifd from "gi://AstalNotifd"
 import AstalMpris from "gi://AstalMpris"
 import AstalWp from "gi://AstalWp"
+import AstalBattery from "gi://AstalBattery"
 import { createBinding, createComputed, createState } from "gnim"
 import { execAsync, subprocess, type Process } from "ags/process"
 
@@ -17,6 +18,7 @@ export const powerProfiles = AstalPowerProfiles.get_default()
 export const notifd = AstalNotifd.get_default()
 export const mpris = AstalMpris.get_default()
 export const audio = AstalWp.get_default()
+export const battery = AstalBattery.get_default()
 
 // =============================================================================
 // Wifi
@@ -1238,4 +1240,69 @@ export function formatMprisTime(seconds: number): string {
   if (h > 0)
     return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
   return `${m}:${s.toString().padStart(2, "0")}`
+}
+
+// =============================================================================
+// Battery (AstalBattery — upower D-Bus 越し。プロパティ更新は安定して
+// notify が来るので Wi-Fi のような自前ポーリングは不要)
+// =============================================================================
+
+export const batteryPresent = createBinding(battery, "isPresent")
+export const batteryPercentage = createBinding(battery, "percentage")
+export const batteryCharging = createBinding(battery, "charging")
+export const batteryState = createBinding(battery, "state")
+export const batteryTimeToEmpty = createBinding(battery, "timeToEmpty")
+export const batteryTimeToFull = createBinding(battery, "timeToFull")
+export const batteryEnergyRate = createBinding(battery, "energyRate")
+export const batteryChargeCycles = createBinding(battery, "chargeCycles")
+export const batteryTemperature = createBinding(battery, "temperature")
+
+/** 残量(0..1) + state を見て表示用 SVG ファイル名を返す。
+ * AC 接続中 (CHARGING / PENDING_CHARGE / FULLY_CHARGED) は常に
+ * battery-charging を出す。`batteryCharging` 派生プロパティは
+ * PENDING_CHARGE のとき false になるので state を直接見る。 */
+export function batteryIconName(): string {
+  const s = batteryState()
+  if (
+    s === AstalBattery.State.CHARGING ||
+    s === AstalBattery.State.PENDING_CHARGE ||
+    s === AstalBattery.State.FULLY_CHARGED
+  ) {
+    return "battery-charging"
+  }
+  const p = batteryPercentage()
+  if (p >= 0.75) return "battery-full"
+  if (p >= 0.4) return "battery-midium"
+  if (p >= 0.15) return "battery-low"
+  return "battery-very-low"
+}
+
+/** upower の State enum を人が読める文字列に。 */
+export function batteryStateLabel(): string {
+  switch (batteryState()) {
+    case AstalBattery.State.CHARGING:
+      return "Charging"
+    case AstalBattery.State.DISCHARGING:
+      return "Discharging"
+    case AstalBattery.State.EMPTY:
+      return "Empty"
+    case AstalBattery.State.FULLY_CHARGED:
+      return "Fully charged"
+    case AstalBattery.State.PENDING_CHARGE:
+      return "Pending charge"
+    case AstalBattery.State.PENDING_DISCHARGE:
+      return "Pending discharge"
+    default:
+      return "Unknown"
+  }
+}
+
+/** "1h 23m" 形式に整形 (0 → "—")。 */
+export function formatBatteryDuration(seconds: number): string {
+  if (!isFinite(seconds) || seconds <= 0) return "—"
+  const total = Math.floor(seconds)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m`
 }

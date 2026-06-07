@@ -250,6 +250,67 @@ window.Bar {
   WallpaperButton.pressed {
     background: $accent-color;
   }
+
+  // バッテリーインジケータ。他のバーボタンと見た目を揃える。
+  // present でないときは Battery.tsx 側で visible={batteryPresent} で消す。
+  BatteryButton {
+    border-radius: 8px;
+    min-height: 26px;
+    padding: 0 8px;
+    background: transparent;
+    margin-right: 2px;
+
+    BatteryRow {
+      BatteryIcon {
+        -gtk-icon-size: 14px;
+      }
+
+      BatteryPercent {
+        color: $text-active-color;
+        font-family: monospace;
+        font-size: 12px;
+        font-feature-settings: "tnum";
+      }
+    }
+  }
+
+  // menubutton は内部に GtkToggleButton を持ち、独自の background/border/
+  // box-shadow を持っているのでそれらを潰す (PowerButton と同じ手法)。
+  BatteryButton > * {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    min-height: 0;
+    outline: none;
+  }
+
+  // クリック後 / フォーカス時に出る focus ring (outline + box-shadow) を消す。
+  // GTK4 の :focus-visible はキーボード遷移直後にも乗るので両方カバー。
+  BatteryButton:focus,
+  BatteryButton:focus-visible,
+  BatteryButton:focus-within,
+  BatteryButton > *:focus,
+  BatteryButton > *:focus-visible,
+  BatteryButton > *:focus-within {
+    outline: none;
+    box-shadow: none;
+    border: none;
+  }
+
+  BatteryButton:hover {
+    background: #2a2a2a;
+  }
+
+  // popover が開いている間 (Battery.tsx 側で pressed クラスを付与) は
+  // accent 色背景に + ラベルを黒に。アイコンは TSX 側で -dark に切替済。
+  BatteryButton.pressed {
+    background: $accent-color;
+
+    BatteryRow BatteryPercent {
+      color: $bg-color;
+    }
+  }
 }
 
 window.WallpaperBackground {
@@ -1545,5 +1606,63 @@ window.NotifPopupLayer {
 
   NotifRow.clickable:hover {
     background: #353535;
+  }
+}
+
+// =============================================================================
+// Battery popover
+// =============================================================================
+BatteryPopover {
+  background: transparent;
+
+  contents {
+    background: $bg-color;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0;
+  }
+
+  BatteryPopoverBox {
+    padding: 12px 14px;
+    min-width: 240px;
+  }
+
+  BatteryPopoverHeader {
+    BatteryPopoverIcon {
+      -gtk-icon-size: 28px;
+      color: $text-active-color;
+    }
+
+    BatteryPopoverPercent {
+      color: $text-active-color;
+      font-size: 18px;
+      font-weight: bold;
+      font-feature-settings: "tnum";
+    }
+
+    BatteryPopoverState {
+      color: $text-inactive-color;
+      font-size: 11px;
+      margin-top: 1px;
+    }
+  }
+
+  BatteryPopoverSep {
+    min-height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 4px 0;
+  }
+
+  BatteryDetailRow {
+    BatteryDetailLabel {
+      color: $text-inactive-color;
+      font-size: 12px;
+    }
+
+    BatteryDetailValue {
+      color: $text-active-color;
+      font-size: 12px;
+      font-feature-settings: "tnum";
+    }
   }
 }

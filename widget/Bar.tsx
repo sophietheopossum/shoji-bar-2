@@ -6,6 +6,7 @@ import { Workspaces } from "./Workspaces"
 import { LayoutMode } from "./LayoutMode"
 import { WallpaperButton } from "./Wallpaper"
 import { StatusButton } from "./StatusMenu"
+import { BatteryButton } from "./Battery"
 
 export default function Bar({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
   const { TOP, LEFT, RIGHT } = Astal.WindowAnchor
@@ -32,6 +33,7 @@ export default function Bar({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
           <ClockButton gdkmonitor={gdkmonitor} />
         </box>
         <box $type="end">
+          <BatteryButton />
           <WallpaperButton gdkmonitor={gdkmonitor} />
           <StatusButton gdkmonitor={gdkmonitor} />
           <box widthRequest={1} />
