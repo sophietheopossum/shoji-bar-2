@@ -251,6 +251,39 @@ window.Bar {
     background: $accent-color;
   }
 
+  // システムトレイ。全体を灰色半透明の丸角 box で囲ってトレイだと分かるようにする。
+  // アイテムが 0 個のときは SystemTray.tsx 側で visible=false にする。
+  SystemTray {
+    background: rgba(192, 192, 192, 0.14);
+    border-radius: 9px;
+    padding: 1px 3px;
+    margin-right: 6px;
+
+    SystemTrayItem {
+      background: transparent;
+      border-radius: 6px;
+      min-width: 24px;
+      min-height: 24px;
+      padding: 0 3px;
+      margin: 0 1px;
+
+      SystemTrayIcon {
+        // window.Bar は color: transparent のため、シンボリックアイコン
+        // (例: input-keyboard-symbolic)が透明になってしまう。明示的に色を指定する。
+        color: $text-active-color;
+        -gtk-icon-size: 16px;
+      }
+    }
+
+    SystemTrayItem:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    SystemTrayItem:active {
+      background: rgba(255, 255, 255, 0.18);
+    }
+  }
+
   // バッテリーインジケータ。他のバーボタンと見た目を揃える。
   // present でないときは Battery.tsx 側で visible={batteryPresent} で消す。
   BatteryButton {
@@ -594,6 +627,96 @@ popover contents {
   border: 1px solid rgba(255, 255, 255, 0.06);
   padding: 4px;
   color: $text-active-color;
+}
+
+// システムトレイの dbusmenu popover。グローバルテーマを上書きし、
+// 吹き出しの三角形(arrow)も周囲の色に合わせる。
+popover.SystemTrayPopover {
+  background: transparent;
+
+  > arrow {
+    background: $bg-up-color;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  > contents {
+    background: $bg-up-color;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 4px;
+    color: $text-active-color;
+  }
+
+  modelbutton {
+    border-radius: 6px;
+    padding: 6px 10px;
+    min-height: 0;
+    color: $text-active-color;
+
+    label {
+      color: $text-active-color;
+    }
+  }
+
+  modelbutton:hover {
+    background: $accent-color;
+    color: $bg-color;
+
+    label {
+      color: $bg-color;
+    }
+  }
+
+  // ラジオ/チェックの indicator もグローバルテーマを上書き。
+  // テーマ依存のドット/チェック画像は消し、選択時はアクセント色のベタ塗りにする。
+  check,
+  radio {
+    min-width: 14px;
+    min-height: 14px;
+    margin-right: 8px;
+    -gtk-icon-source: none;
+    background-image: none;
+    background-color: #3a3a3a;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: none;
+    color: transparent;
+  }
+
+  radio {
+    border-radius: 100%;
+  }
+
+  check {
+    border-radius: 4px;
+  }
+
+  check:checked,
+  check:indeterminate,
+  radio:checked {
+    background-color: $accent-color;
+    border-color: $accent-color;
+  }
+
+  // hover 行(背景がアクセント色)では選択中 indicator を暗色にして潰れないようにする。
+  modelbutton:hover {
+    check:checked,
+    check:indeterminate,
+    radio:checked {
+      background-color: $bg-color;
+      border-color: $bg-color;
+    }
+
+    check,
+    radio {
+      border-color: rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  separator {
+    background: rgba(255, 255, 255, 0.08);
+    min-height: 1px;
+    margin: 4px 6px;
+  }
 }
 
 DockPopover {
