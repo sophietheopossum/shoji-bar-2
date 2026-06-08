@@ -7,6 +7,11 @@ import {
   controlStartMenu,
   type StartMenuAction,
 } from "./widget/StartMenu"
+import {
+  ClipboardMenuLayer,
+  controlClipboardMenu,
+  type ClipboardAction,
+} from "./widget/ClipboardMenu"
 import { ClockMenuLayer } from "./widget/ClockMenu"
 import { WallpaperBackground, WallpaperLayer } from "./widget/Wallpaper"
 import { DockWindow } from "./widget/Dock"
@@ -15,18 +20,25 @@ import { NotifPopupLayer } from "./widget/NotifPopup"
 
 app.start({
   css: style,
-  // ShojiWM config 等から `ags request` 経由で StartMenu を操作する。
-  //   ags request start-menu toggle <connector>
-  //   ags request start-menu open|close <connector>
-  //   ags request start-menu <connector>          (action 省略時は toggle)
+  // ShojiWM config 等から `ags request` 経由でメニューを操作する。
+  //   ags request start-menu toggle|open|close <connector>
+  //   ags request clipboard  toggle|open|close <connector>
+  //   (action 省略時は toggle)
   requestHandler(argv: string[], res: (response: string) => void) {
     const [command, ...rest] = argv
+    const actions = ["toggle", "open", "close"] as const
+    const hasAction = (actions as readonly string[]).includes(rest[0])
+    const action = (hasAction ? rest[0] : "toggle") as StartMenuAction &
+      ClipboardAction
+    const connector = (hasAction ? rest[1] : rest[0]) ?? null
+
     if (command === "start-menu") {
-      const actions: StartMenuAction[] = ["toggle", "open", "close"]
-      const hasAction = actions.includes(rest[0] as StartMenuAction)
-      const action = hasAction ? (rest[0] as StartMenuAction) : "toggle"
-      const connector = (hasAction ? rest[1] : rest[0]) ?? null
       controlStartMenu(connector, action)
+      res("ok")
+      return
+    }
+    if (command === "clipboard") {
+      controlClipboardMenu(connector, action)
       res("ok")
       return
     }
@@ -41,6 +53,7 @@ app.start({
           <This this={app}>
             <WallpaperBackground gdkmonitor={monitor} />
             <StartMenuLayer gdkmonitor={monitor} />
+            <ClipboardMenuLayer gdkmonitor={monitor} />
             <ClockMenuLayer gdkmonitor={monitor} />
             <WallpaperLayer gdkmonitor={monitor} />
             <StatusMenuLayer gdkmonitor={monitor} />
