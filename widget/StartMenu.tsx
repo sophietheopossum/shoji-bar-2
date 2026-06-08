@@ -58,7 +58,17 @@ export function StartMenuButton({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
         LAYER_STATE.then(gdkmonitor, (state) => state.setOpen(!state.isOpen()))
       }
     >
-      <image file={`${SRC}/assets/arch-linux.svg`} />
+      <image
+        cssName="StartMenuIcon"
+        file={LAYER_STATE.then(gdkmonitor, (state) =>
+          state.isOpen((open) =>
+            open
+              ? `${SRC}/assets/arch-linux-black.svg`
+              : `${SRC}/assets/arch-linux-white.svg`,
+          ),
+        )}
+        pixelSize={16}
+      />
     </button>
   )
 }

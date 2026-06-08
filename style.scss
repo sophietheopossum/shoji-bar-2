@@ -121,18 +121,25 @@ window.Bar {
     padding: 3px;
   }
 
+  // 他のバーボタンと統一: 通常は透明 + 白アイコン、押下時(メニュー展開中)は
+  // アクセント色 + 黒アイコン(アイコンの白/黒切替は StartMenu.tsx 側で行う)。
   StartMenuButton {
     border-radius: 8px;
     min-width: 26px;
     min-height: 26px;
-    background: $accent-color;
+    background: transparent;
+  }
+
+  StartMenuButton:hover {
+    background: #2a2a2a;
   }
 
   StartMenuButton.pressed {
-    border-radius: 8px;
-    min-width: 26px;
-    min-height: 26px;
-    background: $pressed-button-color;
+    background: $accent-color;
+  }
+
+  StartMenuButton.pressed:hover {
+    background: $accent-color;
   }
 
   ClockButton {
