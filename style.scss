@@ -368,7 +368,8 @@ window.WallpaperMenuLayer {
   // 高さ(560px)を固定し、open/close を実寸で対称にする(ClockMenu と同様)
   WallpaperMenu {
     background: $bg-color;
-    border-radius: 10px;
+    // 内側の島(radius 10 + margin 10)と同心円に揃える: 10 + 10 = 20
+    border-radius: 20px;
     min-width: 560px;
     min-height: 560px;
     transform: translateY(-560px);
@@ -778,7 +779,8 @@ window.StartMenuLayer {
 
   StartMenu {
     background: $bg-color;
-    border-radius: 10px;
+    // 内側の島(radius 10 + margin 10)と同心円に揃える: 10 + 10 = 20
+    border-radius: 20px;
     min-width: 400px;
     min-height: 600px;
     transform: translateY(-600px);
@@ -998,7 +1000,8 @@ window.ClipboardMenuLayer {
 
   ClipboardMenu {
     background: $bg-color;
-    border-radius: 10px;
+    // 内側の島(radius 10 + margin 10)と同心円に揃える: 10 + 10 = 20
+    border-radius: 20px;
     min-width: 400px;
     min-height: 600px;
     transform: translateY(-600px);
@@ -1131,7 +1134,8 @@ window.ClockMenuLayer {
   // (translateY に % は使えないため StartMenu と同じく実寸を指定する)
   ClockMenu {
     background: $bg-color;
-    border-radius: 10px;
+    // 内側の島(radius 10 + margin 10)と同心円に揃える: 10 + 10 = 20
+    border-radius: 20px;
     min-width: 340px;
     min-height: 475px;
     transform: translateY(-475px);
@@ -1368,7 +1372,8 @@ window.StatusMenuLayer {
 
   StatusMenu {
     background: $bg-color;
-    border-radius: 10px;
+    // 内側の島(radius 10 + margin 10)と同心円に揃える: 10 + 10 = 20
+    border-radius: 20px;
     min-width: 380px;
     min-height: 620px;
     transform: translateY(-646px);
