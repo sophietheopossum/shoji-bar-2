@@ -1965,3 +1965,33 @@ window.MonitorIdentify {
     }
   }
 }
+
+// Snap-zone preview overlay (Windows-style edge snapping + tiling drop slot).
+// The layer fills the monitor and is click-through; the box is positioned via
+// margins. It pops in with an expanding ease and fades out via opacity.
+.SnapPreviewLayer {
+  background: transparent;
+
+  // Opacity and scale are independent classes so the box fades in while
+  // expanding on first show, and re-expands (without fading) on a zone change.
+  // The base state is already scaled down, so there is never a full-size,
+  // opaque frame — which previously looked like a momentary window maximize.
+  SnapPreviewBox {
+    background: rgba($accent-color, 0.18);
+    border: 2px solid rgba($accent-color, 0.9);
+    border-radius: 16px;
+    opacity: 0;
+    transform: scale(0.82);
+    transition:
+      opacity 200ms ease,
+      transform 320ms cubic-bezier(0.1, 0.9, 0.2, 1);
+
+    &.shown {
+      opacity: 1;
+    }
+
+    &.grown {
+      transform: scale(1);
+    }
+  }
+}

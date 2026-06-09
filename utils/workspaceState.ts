@@ -29,6 +29,18 @@ export { view }
 const [dockProximity, setDockProximity] = createState<Record<string, boolean>>({})
 export { dockProximity }
 
+// Snap-zone preview pushed by ShojiWM during a window drag. Per connector:
+// a monitor-local rect (logical px) to highlight, or null to hide it.
+export type SnapPreview = {
+  x: number
+  y: number
+  width: number
+  height: number
+  kind: "floating" | "tiling"
+} | null
+const [snapPreview, setSnapPreview] = createState<Record<string, SnapPreview>>({})
+export { snapPreview }
+
 export const ipc: ShojiIpcClient = connectShojiIpc(
   (message) => {
     if ("event" in message) {
@@ -41,6 +53,17 @@ export const ipc: ShojiIpcClient = connectShojiIpc(
           return
         }
         setDockProximity({ ...current, [payload.monitor]: payload.inside })
+      } else if (message.event === "snap.preview") {
+        const payload = message.payload as {
+          monitor: string
+          rect: { x: number; y: number; width: number; height: number } | null
+          kind: "floating" | "tiling"
+        }
+        const current = snapPreview()
+        const next: SnapPreview = payload.rect
+          ? { ...payload.rect, kind: payload.kind }
+          : null
+        setSnapPreview({ ...current, [payload.monitor]: next })
       }
     } else if ("result" in message && message.result) {
       setView(message.result as WsView)
