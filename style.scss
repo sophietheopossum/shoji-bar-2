@@ -5,8 +5,8 @@ $text-active-color: #f5f5f5;
 $text-inactive-color: #c0c0c0;
 $pressed-button-color: #c0c0c0;
 
-// 通知 1 行 (NotifRow) の見た目とアニメ。StatusMenu の通知欄と NotifPopup の
-// 両方で同じ見た目を使うため mixin にしてある。
+// Look and animation of a single notification row (NotifRow). Made a mixin so
+// the StatusMenu notification list and NotifPopup share the same appearance.
 @mixin notif-row {
   NotifRow {
     background: rgba(255, 255, 255, 0.04);
@@ -25,7 +25,7 @@ $pressed-button-color: #c0c0c0;
         border-radius: 6px;
       }
 
-      // image / icon が無いときの透明スペーサ
+      // Transparent spacer when there is no image / icon
       NotifIcon.NotifIconEmpty {
         background: transparent;
       }
@@ -89,10 +89,11 @@ $pressed-button-color: #c0c0c0;
     }
   }
 
-  // 通知の入場 / 退場のアニメ用。
-  // - entering: 右 32px から滑り込んでフェードイン
-  // - leaving:  右 48px へ滑り出してフェードアウト(早めの easing)
-  // Revealer の SLIDE_DOWN と直列に動いて高さ折りたたみと別フェーズで進行。
+  // Notification enter / exit animation.
+  // - entering: slides in from 32px to the right and fades in
+  // - leaving:  slides out to 48px right and fades out (faster easing)
+  // Runs in series with the Revealer's SLIDE_DOWN, in a separate phase from the
+  // height collapse.
   NotifRow.entering {
     opacity: 0;
     transform: translateX(32px);
@@ -106,7 +107,8 @@ $pressed-button-color: #c0c0c0;
       opacity 500ms cubic-bezier(0.3, -0.3, 0, 1);
   }
 
-  // default action がある通知だけホバー時に薄く明るくしてクリック可能を示す。
+  // Only notifications with a default action brighten slightly on hover to
+  // indicate they are clickable.
   NotifRow.clickable:hover {
     background: rgba(255, 255, 255, 0.08);
   }
@@ -121,8 +123,9 @@ window.Bar {
     padding: 3px;
   }
 
-  // 他のバーボタンと統一: 通常は透明 + 白アイコン、押下時(メニュー展開中)は
-  // アクセント色 + 黒アイコン(アイコンの白/黒切替は StartMenu.tsx 側で行う)。
+  // Consistent with the other bar buttons: normally transparent + white icon,
+  // when pressed (menu open) accent background + black icon (the white/black
+  // icon swap is done in StartMenu.tsx).
   StartMenuButton {
     border-radius: 8px;
     min-width: 26px;
@@ -211,7 +214,7 @@ window.Bar {
       }
     }
 
-    // ウィンドウがあるワークスペースは少し明るく
+    // Workspaces that have windows are slightly brighter
     Workspace.occupied {
 
       WorkspaceLabel {
@@ -223,7 +226,7 @@ window.Bar {
       background: #4a4a4a;
     }
 
-    // 現在のワークスペース
+    // Current workspace
     Workspace.active {
       background: transparent;
       border-color: #c0c0c0;
@@ -258,8 +261,8 @@ window.Bar {
     background: $accent-color;
   }
 
-  // システムトレイ。全体を灰色半透明の丸角 box で囲ってトレイだと分かるようにする。
-  // アイテムが 0 個のときは SystemTray.tsx 側で visible=false にする。
+  // System tray. Wrapped in a gray semi-transparent rounded box so it reads as
+  // a tray. When there are 0 items, SystemTray.tsx sets visible=false.
   SystemTray {
     background: rgba(192, 192, 192, 0.14);
     border-radius: 9px;
@@ -275,8 +278,8 @@ window.Bar {
       margin: 0 1px;
 
       SystemTrayIcon {
-        // window.Bar は color: transparent のため、シンボリックアイコン
-        // (例: input-keyboard-symbolic)が透明になってしまう。明示的に色を指定する。
+        // window.Bar has color: transparent, which would make symbolic icons
+        // (e.g. input-keyboard-symbolic) transparent. Set the color explicitly.
         color: $text-active-color;
         -gtk-icon-size: 16px;
       }
@@ -291,8 +294,8 @@ window.Bar {
     }
   }
 
-  // バッテリーインジケータ。他のバーボタンと見た目を揃える。
-  // present でないときは Battery.tsx 側で visible={batteryPresent} で消す。
+  // Battery indicator. Matches the look of the other bar buttons.
+  // When not present, Battery.tsx hides it via visible={batteryPresent}.
   BatteryButton {
     border-radius: 8px;
     min-height: 26px;
@@ -314,8 +317,8 @@ window.Bar {
     }
   }
 
-  // menubutton は内部に GtkToggleButton を持ち、独自の background/border/
-  // box-shadow を持っているのでそれらを潰す (PowerButton と同じ手法)。
+  // A menubutton holds an internal GtkToggleButton with its own background /
+  // border / box-shadow, so flatten those out (same approach as PowerButton).
   BatteryButton > * {
     background: transparent;
     border: none;
@@ -325,8 +328,9 @@ window.Bar {
     outline: none;
   }
 
-  // クリック後 / フォーカス時に出る focus ring (outline + box-shadow) を消す。
-  // GTK4 の :focus-visible はキーボード遷移直後にも乗るので両方カバー。
+  // Remove the focus ring (outline + box-shadow) shown after a click / on
+  // focus. GTK4's :focus-visible also applies right after keyboard navigation,
+  // so cover both.
   BatteryButton:focus,
   BatteryButton:focus-visible,
   BatteryButton:focus-within,
@@ -342,8 +346,8 @@ window.Bar {
     background: #2a2a2a;
   }
 
-  // popover が開いている間 (Battery.tsx 側で pressed クラスを付与) は
-  // accent 色背景に + ラベルを黒に。アイコンは TSX 側で -dark に切替済。
+  // While the popover is open (Battery.tsx adds the pressed class) use an
+  // accent background + black label. The icon is swapped to -dark in the TSX.
   BatteryButton.pressed {
     background: $accent-color;
 
@@ -419,10 +423,11 @@ window.WallpaperMenuLayer {
   background: transparent;
   color: $text-active-color;
 
-  // 高さ(560px)を固定し、open/close を実寸で対称にする(ClockMenu と同様)
+  // Fix the height (560px) so open/close are symmetric at the real size
+  // (same as ClockMenu).
   WallpaperMenu {
     background: $bg-color;
-    // 内側の島(radius 10 + margin 10)と同心円に揃える: 10 + 10 = 20
+    // Concentric with the inner island (radius 10 + margin 10): 10 + 10 = 20
     border-radius: 20px;
     min-width: 560px;
     min-height: 560px;
@@ -443,7 +448,7 @@ window.WallpaperMenuLayer {
     min-height: 10px;
   }
 
-  // 上の島: ディレクトリ
+  // Top island: directory
   WallpaperDirIsland {
     background: $bg-up-color;
     border-radius: 10px;
@@ -479,7 +484,7 @@ window.WallpaperMenuLayer {
     }
   }
 
-  // 中央の島: サムネ一覧
+  // Middle island: thumbnail list
   WallpaperGridScroll {
     background: $bg-up-color;
     border-radius: 10px;
@@ -510,7 +515,7 @@ window.WallpaperMenuLayer {
       }
     }
 
-    // スクロールバー(StartMenu と同じ)
+    // Scrollbar (same as StartMenu)
     scrollbar {
       background: transparent;
       margin: 2px;
@@ -544,7 +549,7 @@ window.WallpaperMenuLayer {
     }
   }
 
-  // 下の島: 適用範囲 + override 解除
+  // Bottom island: scope + clear override
   WallpaperControlIsland {
     background: $bg-up-color;
     border-radius: 10px;
@@ -613,16 +618,17 @@ window.DockLayer {
   background: transparent;
   color: $text-active-color;
 
-  // 画面下に貼り付くドック本体
-  // 画面下からの 12px の隙間は marginBottom (layer-shell margin) で取っている。
-  // CSS で margin を付けると surface 内の透明領域になりクリックを吸ってしまう。
+  // The dock body, stuck to the bottom of the screen.
+  // The 12px gap from the bottom is taken with marginBottom (layer-shell
+  // margin). A CSS margin would become a transparent area inside the surface
+  // and would swallow clicks.
   DockBar {
     background: $bg-color;
     border-radius: 11px;
     border: 1px solid rgba(255, 255, 255, 0.05);
     padding: 2px 2px;
 
-    // 初期/閉じ状態 (下に潜って見えない)
+    // Initial / closed state (tucked below, out of view)
     transform: translateY(120px);
     opacity: 0;
   }
@@ -643,7 +649,7 @@ window.DockLayer {
       opacity 200ms ease;
   }
 
-  // 1 アプリ分のアイコン
+  // One app's icon
   DockItem {
     background: transparent;
     border-radius: 8px;
@@ -695,7 +701,7 @@ window.DockLayer {
   }
 }
 
-// 右クリック popover の中身
+// Contents of the right-click popover
 popover.background.DockPopover,
 popover contents {
   background: $bg-up-color;
@@ -705,8 +711,8 @@ popover contents {
   color: $text-active-color;
 }
 
-// システムトレイの dbusmenu popover。グローバルテーマを上書きし、
-// 吹き出しの三角形(arrow)も周囲の色に合わせる。
+// System tray dbusmenu popover. Overrides the global theme and matches the
+// callout triangle (arrow) to the surrounding color.
 popover.SystemTrayPopover {
   background: transparent;
 
@@ -743,8 +749,9 @@ popover.SystemTrayPopover {
     }
   }
 
-  // ラジオ/チェックの indicator もグローバルテーマを上書き。
-  // テーマ依存のドット/チェック画像は消し、選択時はアクセント色のベタ塗りにする。
+  // Override the global theme for the radio / check indicators too.
+  // Remove the theme-dependent dot/check images; when selected, use a solid
+  // accent fill.
   check,
   radio {
     min-width: 14px;
@@ -773,7 +780,8 @@ popover.SystemTrayPopover {
     border-color: $accent-color;
   }
 
-  // hover 行(背景がアクセント色)では選択中 indicator を暗色にして潰れないようにする。
+  // On a hover row (accent background), darken the selected indicator so it
+  // does not blend in.
   modelbutton:hover {
     check:checked,
     check:indeterminate,
@@ -847,7 +855,7 @@ window.StartMenuLayer {
 
   StartMenu {
     background: $bg-color;
-    // 内側の島(radius 10 + margin 10)と同心円に揃える: 10 + 10 = 20
+    // Concentric with the inner island (radius 10 + margin 10): 10 + 10 = 20
     border-radius: 20px;
     min-width: 400px;
     min-height: 600px;
@@ -932,7 +940,7 @@ window.StartMenuLayer {
       }
     }
 
-    // スクロールバーを既存の配色に合わせる
+    // Match the scrollbar to the existing color scheme
     scrollbar {
       background: transparent;
       margin: 2px;
@@ -966,7 +974,7 @@ window.StartMenuLayer {
     }
   }
 
-  // ユーザー情報の島
+  // User-info island
   UserBox {
     background: $bg-up-color;
     border-radius: 10px;
@@ -1010,7 +1018,7 @@ window.StartMenuLayer {
       background: #525252;
     }
 
-    // menubutton 内部に出る矢印やトグル装飾を消す
+    // Remove the arrow / toggle decoration that appears inside the menubutton
     PowerButton > * {
       background: transparent;
       border: none;
@@ -1061,14 +1069,14 @@ window.StartMenuLayer {
   }
 }
 
-// クリップボード履歴。デザインは StartMenu を踏襲(ユーザー情報なし)。
+// Clipboard history. Follows the StartMenu design (no user info).
 window.ClipboardMenuLayer {
   background: transparent;
   color: $text-active-color;
 
   ClipboardMenu {
     background: $bg-color;
-    // 内側の島(radius 10 + margin 10)と同心円に揃える: 10 + 10 = 20
+    // Concentric with the inner island (radius 10 + margin 10): 10 + 10 = 20
     border-radius: 20px;
     min-width: 400px;
     min-height: 600px;
@@ -1154,7 +1162,7 @@ window.ClipboardMenuLayer {
       }
     }
 
-    // スクロールバー(StartMenu と同じ)
+    // Scrollbar (same as StartMenu)
     scrollbar {
       background: transparent;
       margin: 2px;
@@ -1197,12 +1205,12 @@ window.ClockMenuLayer {
   background: transparent;
   color: $text-active-color;
 
-  // 高さ(475px)を固定し、閉じる移動量を実高さに一致させることで
-  // open/close が同じ cubic-bezier で対称に見えるようにする
-  // (translateY に % は使えないため StartMenu と同じく実寸を指定する)
+  // Fix the height (475px) and match the close travel to the real height so
+  // open/close look symmetric with the same cubic-bezier (translateY can't use
+  // %, so specify the real size, same as StartMenu).
   ClockMenu {
     background: $bg-color;
-    // 内側の島(radius 10 + margin 10)と同心円に揃える: 10 + 10 = 20
+    // Concentric with the inner island (radius 10 + margin 10): 10 + 10 = 20
     border-radius: 20px;
     min-width: 340px;
     min-height: 475px;
@@ -1225,7 +1233,7 @@ window.ClockMenuLayer {
     min-height: 10px;
   }
 
-  // 上の島: 日付 + 時計 + タイムゾーン
+  // Top island: date + clock + timezone
   ClockIsland {
     background: $bg-up-color;
     border-radius: 10px;
@@ -1252,7 +1260,7 @@ window.ClockMenuLayer {
     }
   }
 
-  // 下の島: カレンダー
+  // Bottom island: calendar
   CalendarIsland {
     background: $bg-up-color;
     border-radius: 10px;
@@ -1260,8 +1268,9 @@ window.ClockMenuLayer {
     padding: 8px;
   }
 
-  // カレンダーはグローバルテーマの影響を受けないよう全ノードを明示指定する
-  // ノード構成:
+  // Specify every node explicitly so the calendar is not affected by the
+  // global theme.
+  // Node structure:
   //   Calendar(.view)
   //     header.horizontal -> button.image-button > image, stack.month > label, label.year
   //     grid.horizontal   -> label.day-name / label.week-number / label.day-number[.other-month][.today]
@@ -1273,7 +1282,7 @@ window.ClockMenuLayer {
     padding: 0;
     outline: none;
 
-    // --- ヘッダ ---
+    // --- header ---
     header {
       background: transparent;
       border: none;
@@ -1326,7 +1335,7 @@ window.ClockMenuLayer {
       }
     }
 
-    // --- グリッド ---
+    // --- grid ---
     grid {
       background: transparent;
 
@@ -1344,7 +1353,7 @@ window.ClockMenuLayer {
         font-size: 13px;
       }
 
-      // 曜日見出し
+      // Weekday headings
       label.day-name {
         color: $text-inactive-color;
         font-weight: bold;
@@ -1352,14 +1361,14 @@ window.ClockMenuLayer {
         background: transparent;
       }
 
-      // 週番号(非表示にしているが念のため)
+      // Week number (hidden, but styled just in case)
       label.week-number {
         color: $text-inactive-color;
         font-size: 11px;
         background: transparent;
       }
 
-      // 日付セル
+      // Date cells
       label.day-number {
         color: $text-active-color;
         background: transparent;
@@ -1370,7 +1379,7 @@ window.ClockMenuLayer {
         color: $text-active-color;
       }
 
-      // 当月外の日付
+      // Days outside the current month
       label.day-number.other-month {
         color: rgba(245, 245, 245, 0.28);
         background: transparent;
@@ -1381,7 +1390,7 @@ window.ClockMenuLayer {
         color: rgba(245, 245, 245, 0.5);
       }
 
-      // 今日
+      // Today
       label.day-number.today {
         background: #5a5a5a;
         color: $text-active-color;
@@ -1392,7 +1401,7 @@ window.ClockMenuLayer {
         background: #6a6a6a;
       }
 
-      // 選択中の日付
+      // Selected date
       label.day-number:selected {
         background: $accent-color;
         color: $bg-color;
@@ -1440,7 +1449,7 @@ window.StatusMenuLayer {
 
   StatusMenu {
     background: $bg-color;
-    // 内側の島(radius 10 + margin 10)と同心円に揃える: 10 + 10 = 20
+    // Concentric with the inner island (radius 10 + margin 10): 10 + 10 = 20
     border-radius: 20px;
     min-width: 380px;
     min-height: 620px;
@@ -1514,7 +1523,7 @@ window.StatusMenuLayer {
     }
 
     QuickButton.expanded {
-      // active と被ったときも分かるよう少し縁取り
+      // A slight border so it's distinguishable even when it overlaps active
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
     }
 
@@ -1588,12 +1597,12 @@ window.StatusMenuLayer {
           padding: 20px 0;
         }
 
-        // 通知 1 行のスタイル: 上の @mixin を参照。
+        // Single notification row style: see the @mixin above.
         @include notif-row;
       }
 
-      // 非 overlay なので scrollbar 自体が幅を持つ。細めに描いて、内容との
-      // 間に少し余白を作って干渉感を消す。
+      // Not overlay, so the scrollbar itself takes up width. Draw it thin and
+      // leave a little gap from the content to reduce the sense of crowding.
       scrollbar {
         background: transparent;
         border: none;
@@ -1633,8 +1642,8 @@ window.StatusMenuLayer {
         background: rgba(255, 255, 255, 0.08);
       }
 
-      // 0..100 の数値表示。padStart(3, " ") されているので、等幅フォントで
-      // 描けば桁の揺れによるレイアウト変動が出ない。
+      // 0..100 numeric display. It is padStart(3, " "), so with a monospace
+      // font there is no layout shift from digit-count changes.
       SliderValue {
         color: $text-active-color;
         font-family: monospace;
@@ -1643,7 +1652,7 @@ window.StatusMenuLayer {
         min-width: 24px;
       }
 
-      // MediaProgress と完全に同じ寸法/挙動。
+      // Exactly the same dimensions / behavior as MediaProgress.
       scale {
         min-height: 12px;
 
@@ -1712,8 +1721,8 @@ window.StatusMenuLayer {
         font-feature-settings: "tnum";
       }
 
-      // Gtk.Scale (.MediaProgress) でシーク可能。ノード構成は
-      // scale > trough > highlight + slider。
+      // Seekable via Gtk.Scale (.MediaProgress). Node structure is
+      // scale > trough > highlight + slider.
       scale.MediaProgress {
         min-height: 12px;
 
@@ -1735,7 +1744,7 @@ window.StatusMenuLayer {
           min-width: 12px;
           min-height: 12px;
           margin: -4px;
-          // 初期はちょっと控えめにしてホバー時に主張する
+          // Subtle initially, more prominent on hover
           box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
           transition: transform 120ms ease;
         }
@@ -1760,8 +1769,9 @@ window.StatusMenuLayer {
         background: rgba(255, 255, 255, 0.08);
       }
 
-      // 以前は MediaPlayPause だけ大きくしていたが、横並びの行高が押し上げ
-      // られて隣の次/戻るボタンが縦長になってしまうため全部同じサイズで揃える。
+      // Previously only MediaPlayPause was larger, but that pushed up the row
+      // height and made the adjacent next/prev buttons tall, so make them all
+      // the same size.
     }
   }
 }
@@ -1780,8 +1790,8 @@ window.StatusMenuLayer {
         font-weight: bold;
       }
 
-      // Gtk.Switch のスタイル。GTK4 では cssName="switch" がベース、
-      // 内部に slider node。:checked が ON 状態。
+      // Gtk.Switch style. In GTK4 cssName="switch" is the base, with a slider
+      // node inside. :checked is the ON state.
       WifiSwitch {
         min-width: 40px;
         min-height: 22px;
@@ -1911,13 +1921,13 @@ window.StatusMenuLayer {
 }
 
 // =============================================================================
-// Notification Popups (右上に出る一時的なバナー)
+// Notification Popups (transient banners shown in the top-right)
 // =============================================================================
 window.NotifPopupLayer {
   background: transparent;
 
-  // padding は使わない: layer-shell margin で位置決めしているので、
-  // サーフェス = container = popup の natural サイズ。
+  // Don't use padding: positioning is done with the layer-shell margin, so
+  // surface = container = the popup's natural size.
   NotifPopupContainer {
     background: transparent;
     min-width: 360px;
@@ -1928,11 +1938,12 @@ window.NotifPopupLayer {
     min-width: 360px;
   }
 
-  // NotifRow / .entering / .leaving / .clickable:hover 一式を再利用。
+  // Reuse the whole NotifRow / .entering / .leaving / .clickable:hover set.
   @include notif-row;
 
-  // popup は壁紙やアプリ画面の上に出るので透過背景だと読めない。
-  // 不透明な独自背景に上書き + 軽く縁取りで境界を出す。
+  // Popups appear over the wallpaper or app screens, so a transparent
+  // background would be unreadable. Override with an opaque custom background
+  // plus a light border to define the edge.
   NotifRow {
     background: $bg-up-color;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2059,7 +2070,7 @@ UsagePopover {
   }
 }
 
-// モニター識別オーバーレイ。各モニタ中央にコネクタ名をデカデカ表示する。
+// Monitor-identify overlay. Shows the connector name large in the center of each monitor.
 window.MonitorIdentify {
   background: transparent;
 
