@@ -1563,7 +1563,7 @@ window.StatusMenuLayer {
 
             SubmenuRowLabel,
             SubmenuRowSub {
-              color: $bg-color;
+              color: $text-active-black-color;
             }
           }
         }
@@ -1819,7 +1819,7 @@ window.StatusMenuLayer {
         background: $accent-color;
 
         slider {
-          background: $bg-color;
+          background: $text-active-black-color;
         }
       }
 
