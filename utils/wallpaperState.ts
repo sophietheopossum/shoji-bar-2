@@ -140,13 +140,7 @@ const IMAGE_MIME = new Set([
   "image/avif",
 ])
 
-const IMAGE_EXT = new Set([
-  ".png",
-  ".jpg",
-  ".jpeg",
-  ".webp",
-  ".avif",
-])
+const IMAGE_EXT = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif"])
 
 function hasImageExt(name: string): boolean {
   const lower = name.toLowerCase()

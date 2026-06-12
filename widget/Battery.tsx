@@ -119,7 +119,11 @@ export function BatteryButton() {
           orientation={Gtk.Orientation.VERTICAL}
           spacing={6}
         >
-          <box cssName="BatteryPopoverHeader" spacing={10} valign={Gtk.Align.CENTER}>
+          <box
+            cssName="BatteryPopoverHeader"
+            spacing={10}
+            valign={Gtk.Align.CENTER}
+          >
             <image
               cssName="BatteryPopoverIcon"
               file={iconFileWhite}

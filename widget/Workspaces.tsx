@@ -1,6 +1,11 @@
 import { Gdk, Gtk } from "ags/gtk4"
 import { For, createComputed } from "gnim"
-import { ipc, view, monitorView, type WsWorkspace } from "../utils/workspaceState"
+import {
+  ipc,
+  view,
+  monitorView,
+  type WsWorkspace,
+} from "../utils/workspaceState"
 
 export function Workspaces({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
   const connector = gdkmonitor.get_connector()

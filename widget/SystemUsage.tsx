@@ -150,7 +150,10 @@ export function MemoryButton() {
           formatKbAsGiB(Math.max(0, memTotalKb() - memAvailableKb())),
         ),
       },
-      { label: "Total", value: createComputed(() => formatKbAsGiB(memTotalKb())) },
+      {
+        label: "Total",
+        value: createComputed(() => formatKbAsGiB(memTotalKb())),
+      },
       {
         label: "Available",
         value: createComputed(() => formatKbAsGiB(memAvailableKb())),

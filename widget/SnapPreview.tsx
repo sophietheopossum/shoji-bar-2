@@ -91,13 +91,17 @@ export function SnapPreviewLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
       setShown(false)
       setGrown(false)
       clearHideTimeout()
-      hideTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, FADE_OUT_MS, () => {
-        hideTimeoutId = null
-        if (!shown()) {
-          setMounted(false)
-        }
-        return GLib.SOURCE_REMOVE
-      })
+      hideTimeoutId = GLib.timeout_add(
+        GLib.PRIORITY_DEFAULT,
+        FADE_OUT_MS,
+        () => {
+          hideTimeoutId = null
+          if (!shown()) {
+            setMounted(false)
+          }
+          return GLib.SOURCE_REMOVE
+        },
+      )
     }
   }
 

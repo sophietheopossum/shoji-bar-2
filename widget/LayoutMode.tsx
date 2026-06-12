@@ -1,6 +1,11 @@
 import { Gdk, Gtk } from "ags/gtk4"
 import { createComputed } from "gnim"
-import { view, monitorView, activeWorkspace, ipc } from "../utils/workspaceState"
+import {
+  view,
+  monitorView,
+  activeWorkspace,
+  ipc,
+} from "../utils/workspaceState"
 
 // Label showing whether the current workspace is tiled or floating.
 // "Tiled" / "Float" (monospace) with icons (assets/tiled.svg, assets/float.svg).

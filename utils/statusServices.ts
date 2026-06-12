@@ -54,9 +54,8 @@ export type WifiInternetValue = (typeof WifiInternet)[keyof typeof WifiInternet]
 
 const [wifiEnabledState, setWifiEnabledState] = createState(false)
 const [wifiSsidState, setWifiSsidState] = createState<string | null>(null)
-const [wifiInternetState, setWifiInternetState] = createState<WifiInternetValue>(
-  WifiInternet.DISCONNECTED,
-)
+const [wifiInternetState, setWifiInternetState] =
+  createState<WifiInternetValue>(WifiInternet.DISCONNECTED)
 const [wifiStrengthState, setWifiStrengthState] = createState(0)
 const [wifiScanningState, setWifiScanningState] = createState(false)
 const [wifiApsState, setWifiApsState] = createState<WifiAp[]>([])
@@ -139,13 +138,7 @@ async function pollWifiState(): Promise<void> {
     // 2) Determine CONNECTED/CONNECTING from device state + capture the iface
     let deviceState: string | null = null
     try {
-      const out = await execAsync([
-        "nmcli",
-        "-t",
-        "-f",
-        "TYPE,STATE",
-        "device",
-      ])
+      const out = await execAsync(["nmcli", "-t", "-f", "TYPE,STATE", "device"])
       const text = typeof out === "string" ? out : ""
       for (const line of text.split("\n")) {
         const f = splitNmcliFields(line)
@@ -494,18 +487,24 @@ async function pollBluetoothState(): Promise<void> {
     }
 
     // 2) Determine paired / connected / trusted from the device list + filtered list
-    const [allText, pairedText, connectedText, trustedText] = await Promise.all([
-      execAsync(["bluetoothctl", "devices"]).catch(() => ""),
-      execAsync(["bluetoothctl", "devices", "Paired"]).catch(() => ""),
-      execAsync(["bluetoothctl", "devices", "Connected"]).catch(() => ""),
-      execAsync(["bluetoothctl", "devices", "Trusted"]).catch(() => ""),
-    ])
+    const [allText, pairedText, connectedText, trustedText] = await Promise.all(
+      [
+        execAsync(["bluetoothctl", "devices"]).catch(() => ""),
+        execAsync(["bluetoothctl", "devices", "Paired"]).catch(() => ""),
+        execAsync(["bluetoothctl", "devices", "Connected"]).catch(() => ""),
+        execAsync(["bluetoothctl", "devices", "Trusted"]).catch(() => ""),
+      ],
+    )
     const all = parseDevicesOutput(typeof allText === "string" ? allText : "")
-    const pairedSet = parseMacs(typeof pairedText === "string" ? pairedText : "")
+    const pairedSet = parseMacs(
+      typeof pairedText === "string" ? pairedText : "",
+    )
     const connectedSet = parseMacs(
       typeof connectedText === "string" ? connectedText : "",
     )
-    const trustedSet = parseMacs(typeof trustedText === "string" ? trustedText : "")
+    const trustedSet = parseMacs(
+      typeof trustedText === "string" ? trustedText : "",
+    )
 
     const devs: BtDevice[] = all.map((d) => ({
       mac: d.mac,
@@ -652,8 +651,9 @@ async function readBluetoothPower(): Promise<{
     const text = typeof out === "string" ? out : ""
     const powered = /^\s*Powered:\s*yes/im.test(text)
     // on-disabling / off-enabling are transitional states. Used to detect stuck.
-    const transitional =
-      /^\s*PowerState:\s*(on-disabling|off-enabling)/im.test(text)
+    const transitional = /^\s*PowerState:\s*(on-disabling|off-enabling)/im.test(
+      text,
+    )
     return { powered, transitional }
   } catch {
     return { powered: false, transitional: false }
@@ -698,7 +698,9 @@ export async function setBluetoothEnabled(enabled: boolean): Promise<void> {
       const msg = errMessage(lastErr)
       console.error("[status] bluetoothctl power on failed:", msg)
       if (/Busy|NotReady/i.test(msg)) {
-        console.error("[status] attempting rfkill cycle to recover stuck adapter")
+        console.error(
+          "[status] attempting rfkill cycle to recover stuck adapter",
+        )
         await rfkillResetBluetooth()
         try {
           await execAsync(["bluetoothctl", "power", "on"])
@@ -733,7 +735,10 @@ export async function setBluetoothEnabled(enabled: boolean): Promise<void> {
       try {
         await execAsync(["rfkill", "block", "bluetooth"])
       } catch (err) {
-        console.error("[status] rfkill block bluetooth failed:", errMessage(err))
+        console.error(
+          "[status] rfkill block bluetooth failed:",
+          errMessage(err),
+        )
       }
     }
   }
@@ -937,7 +942,9 @@ export function ppdLabel(profile: string | null | undefined): string {
 
 export const notifDnd = createBinding(notifd, "dontDisturb")
 
-const [notifListState, setNotifListState] = createState<AstalNotifd.Notification[]>([])
+const [notifListState, setNotifListState] = createState<
+  AstalNotifd.Notification[]
+>([])
 export const notifList = notifListState
 
 function refreshNotifList() {
@@ -1016,7 +1023,9 @@ function bindSpeaker(s: import("gi://AstalWp").default.Endpoint | null) {
   )
 }
 
-audio.connect("notify::default-speaker", () => bindSpeaker(audio.default_speaker))
+audio.connect("notify::default-speaker", () =>
+  bindSpeaker(audio.default_speaker),
+)
 bindSpeaker(audio.default_speaker)
 
 export function setSpeakerVolume(v: number) {
@@ -1063,7 +1072,9 @@ const backlightDevice = findBacklightDevice()
 function readBacklightValue(name: "brightness" | "max_brightness"): number {
   if (!backlightDevice) return 0
   try {
-    const file = Gio.File.new_for_path(`${BACKLIGHT_PATH}/${backlightDevice}/${name}`)
+    const file = Gio.File.new_for_path(
+      `${BACKLIGHT_PATH}/${backlightDevice}/${name}`,
+    )
     const [, contents] = file.load_contents(null)
     return Number.parseInt(new TextDecoder().decode(contents).trim(), 10) || 0
   } catch {
@@ -1130,7 +1141,8 @@ const [mediaArtUrlState, setMediaArtUrlState] = createState<string>("")
 const [mediaPlaybackStatusState, setMediaPlaybackStatusState] =
   createState<AstalMpris.PlaybackStatus>(AstalMpris.PlaybackStatus.STOPPED)
 const [mediaLengthState, setMediaLengthState] = createState<number>(0)
-const [mediaCanGoNextState, setMediaCanGoNextState] = createState<boolean>(false)
+const [mediaCanGoNextState, setMediaCanGoNextState] =
+  createState<boolean>(false)
 const [mediaCanGoPreviousState, setMediaCanGoPreviousState] =
   createState<boolean>(false)
 
@@ -1376,7 +1388,11 @@ function pollLoadAndCores(): void {
   const loadavg = readProcFile("/proc/loadavg")
   if (loadavg) {
     const p = loadavg.trim().split(/\s+/)
-    setLoadAverageState([Number(p[0]) || 0, Number(p[1]) || 0, Number(p[2]) || 0])
+    setLoadAverageState([
+      Number(p[0]) || 0,
+      Number(p[1]) || 0,
+      Number(p[2]) || 0,
+    ])
   }
 }
 

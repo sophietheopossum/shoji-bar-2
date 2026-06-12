@@ -1,7 +1,8 @@
-$bg-color: #151515;
+$bg-color: #15151570;
 $bg-up-color: #2b2b2b;
 $accent-color: #88cddd;
 $text-active-color: #f5f5f5;
+$text-active-black-color: #000000;
 $text-inactive-color: #c0c0c0;
 $pressed-button-color: #c0c0c0;
 
@@ -134,7 +135,7 @@ window.Bar {
   }
 
   StartMenuButton:hover {
-    background: #2a2a2a;
+    background: #2a2a2a50;
   }
 
   StartMenuButton.pressed {
@@ -159,14 +160,14 @@ window.Bar {
   }
 
   ClockButton:hover {
-    background: #2a2a2a;
+    background: #2a2a2a50;
   }
 
   ClockButton.pressed {
     background: $accent-color;
 
     ClockButtonLabel {
-      color: $bg-color;
+      color: $text-active-black-color;
     }
   }
 
@@ -189,7 +190,7 @@ window.Bar {
   }
 
   LayoutMode:hover {
-    background: #2a2a2a;
+    background: #2a2a2a50;
   }
 
   Workspaces {
@@ -204,26 +205,25 @@ window.Bar {
       border-style: solid;
       border-width: 1px;
       border-color: transparent;
-      background: #2a2a2a;
+      background: #2a2a2a50;
 
       WorkspaceLabel {
         color: $text-inactive-color;
         font-size: 12px;
         font-feature-settings: "tnum";
-        margin-left: 1px;
+        margin-left: 0.5px;
       }
     }
 
     // Workspaces that have windows are slightly brighter
     Workspace.occupied {
-
       WorkspaceLabel {
         color: $text-active-color;
       }
     }
 
     Workspace:hover {
-      background: #4a4a4a;
+      background: #dcdcdc50;
     }
 
     // Current workspace
@@ -237,7 +237,7 @@ window.Bar {
     }
 
     Workspace.active:hover {
-      background: #4a4a4a;
+      background: #dcdcdc50;
     }
   }
 
@@ -254,7 +254,7 @@ window.Bar {
   }
 
   WallpaperButton:hover {
-    background: #2a2a2a;
+    background: #2a2a2a50;
   }
 
   WallpaperButton.pressed {
@@ -343,7 +343,7 @@ window.Bar {
   }
 
   BatteryButton:hover {
-    background: #2a2a2a;
+    background: #2a2a2a50;
   }
 
   // While the popover is open (Battery.tsx adds the pressed class) use an
@@ -399,7 +399,7 @@ window.Bar {
   }
 
   UsageButton:hover {
-    background: #2a2a2a;
+    background: #2a2a2a50;
   }
 
   UsageButton.pressed {
@@ -480,7 +480,7 @@ window.WallpaperMenuLayer {
     }
 
     WallpaperDirButton:hover {
-      background: #5a5a5a;
+      background: #5a5a5a50;
     }
   }
 
@@ -1404,13 +1404,13 @@ window.ClockMenuLayer {
       // Selected date
       label.day-number:selected {
         background: $accent-color;
-        color: $bg-color;
+        color: $text-active-black-color;
         font-weight: bold;
       }
 
       label.day-number.today:selected {
         background: $accent-color;
-        color: $bg-color;
+        color: $text-active-black-color;
       }
     }
   }
@@ -1435,7 +1435,7 @@ window.Bar {
   }
 
   StatusButton:hover {
-    background: #2a2a2a;
+    background: #2a2a2a50;
   }
 
   StatusButton.pressed {
@@ -1518,7 +1518,7 @@ window.StatusMenuLayer {
       background: $accent-color;
 
       QuickButtonInner QuickButtonLabel {
-        color: $bg-color;
+        color: $text-active-black-color;
       }
     }
 

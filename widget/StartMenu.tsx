@@ -292,7 +292,10 @@ export function StartMenuLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
               hexpand
             >
               <For each={results}>
-                {(application: AstalApps.Application, index: Accessor<number>) => {
+                {(
+                  application: AstalApps.Application,
+                  index: Accessor<number>,
+                ) => {
                   const row = (
                     <button
                       cssName={"AppButton"}
@@ -346,7 +349,9 @@ export function StartMenuLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
         >
           <box
             cssName={"UserIcon"}
-            css={`background-image: url("file://${homeDir}/Pictures/icon.png");`}
+            css={`
+              background-image: url("file://${homeDir}/Pictures/icon.png");
+            `}
             valign={Gtk.Align.CENTER}
           />
           <box
@@ -404,33 +409,23 @@ export function StartMenuLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
                   cssName={"PowerMenuItem"}
                   onClicked={() => runPower("systemctl poweroff")}
                 >
-                  <label
-                    label={"Power Off"}
-                    halign={Gtk.Align.START}
-                    hexpand
-                  />
+                  <label label={"Power Off"} halign={Gtk.Align.START} hexpand />
                 </button>
                 <button
                   cssName={"PowerMenuItem"}
                   onClicked={() => runPower("systemctl reboot")}
                 >
-                  <label
-                    label={"Restart"}
-                    halign={Gtk.Align.START}
-                    hexpand
-                  />
+                  <label label={"Restart"} halign={Gtk.Align.START} hexpand />
                 </button>
                 <button
                   cssName={"PowerMenuItem"}
                   onClicked={() =>
-                    runPower(`loginctl terminate-user "${GLib.get_user_name()}"`)
+                    runPower(
+                      `loginctl terminate-user "${GLib.get_user_name()}"`,
+                    )
                   }
                 >
-                  <label
-                    label={"Logout"}
-                    halign={Gtk.Align.START}
-                    hexpand
-                  />
+                  <label label={"Logout"} halign={Gtk.Align.START} hexpand />
                 </button>
               </box>
             </popover>

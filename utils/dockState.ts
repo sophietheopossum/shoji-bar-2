@@ -102,7 +102,9 @@ function normalize(s: string | null | undefined): string {
 
 const appCache = new Map<string, AstalApps.Application | null>()
 
-export function resolveApp(appId: string | undefined): AstalApps.Application | null {
+export function resolveApp(
+  appId: string | undefined,
+): AstalApps.Application | null {
   if (!appId) return null
   const cached = appCache.get(appId)
   if (cached !== undefined) return cached
@@ -196,14 +198,12 @@ export function dockItemsFor(monitor: WsMonitor | null): DockItem[] {
   for (const entry of pinnedEntries) {
     const pinnedApp = apps.get_list().find((a) => a.entry === entry) ?? null
     // Link the running group that shares the same desktop id as the pinned entry
-    const matchingKey = [...byKey.keys()].find(
-      (k) => {
-        const w = byKey.get(k)?.[0]
-        if (!w) return false
-        const resolved = resolveApp(w.appId)
-        return resolved?.entry === entry
-      },
-    )
+    const matchingKey = [...byKey.keys()].find((k) => {
+      const w = byKey.get(k)?.[0]
+      if (!w) return false
+      const resolved = resolveApp(w.appId)
+      return resolved?.entry === entry
+    })
     const windows = matchingKey ? (byKey.get(matchingKey) ?? []) : []
     if (matchingKey) seenKeys.add(matchingKey)
 
@@ -269,5 +269,7 @@ export function monitorByConnector(
     const matched = v.monitors.find((m) => m.name === connector)
     if (matched) return matched
   }
-  return v.monitors.find((m) => m.name === v.currentMonitor) ?? v.monitors[0] ?? null
+  return (
+    v.monitors.find((m) => m.name === v.currentMonitor) ?? v.monitors[0] ?? null
+  )
 }

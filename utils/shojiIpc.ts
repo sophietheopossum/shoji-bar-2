@@ -72,11 +72,15 @@ export function connectShojiIpc(
     if (closed || reconnectTimer !== null) {
       return
     }
-    reconnectTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, reconnectMs, () => {
-      reconnectTimer = null
-      tryConnect()
-      return GLib.SOURCE_REMOVE
-    })
+    reconnectTimer = GLib.timeout_add(
+      GLib.PRIORITY_DEFAULT,
+      reconnectMs,
+      () => {
+        reconnectTimer = null
+        tryConnect()
+        return GLib.SOURCE_REMOVE
+      },
+    )
   }
 
   function handleDisconnect() {

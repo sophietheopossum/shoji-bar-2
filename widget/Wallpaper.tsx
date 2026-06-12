@@ -1,5 +1,5 @@
 import { Astal, Gdk, Gtk } from "ags/gtk4"
-import { createComputed, createRoot, createState } from "gnim"
+import { Accessor, createComputed, createRoot, createState } from "gnim"
 import app from "ags/gtk4/app"
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
@@ -80,19 +80,28 @@ export function WallpaperBackground({
 // =============================================================================
 
 export function WallpaperButton({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
+  // While the menu is open the whole button turns accent-colored, so white icons
+  // are hard to see. Swap to the -dark variant while pressed.
+  // LayerState.then returns undefined when no state is registered; in that case
+  // always treat it as false (= not pressed = white icon).
+  const isPressed: Accessor<boolean> =
+    LAYER_STATE.then(gdkmonitor, (state) => state.isOpen((isOpen) => isOpen)) ??
+    createComputed(() => false)
+
   return (
     <button
       cssName="WallpaperButton"
-      class={LAYER_STATE.then(gdkmonitor, (state) =>
-        state.isOpen((isOpen) => (isOpen ? "pressed" : "")),
-      )}
+      class={isPressed((pressed) => (pressed ? "pressed" : ""))}
       onClicked={() =>
         LAYER_STATE.then(gdkmonitor, (state) => state.setOpen(!state.isOpen()))
       }
     >
       <image
         cssName="WallpaperButtonIcon"
-        file={`${SRC}/assets/wallpaper.svg`}
+        file={isPressed(
+          (pressed) =>
+            `${SRC}/assets/wallpaper` + (pressed ? "-dark.svg" : ".svg"),
+        )}
         pixelSize={16}
       />
     </button>
@@ -220,32 +229,36 @@ export function WallpaperLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
     // show the dialog, then reopen with setOpen(true) when it returns.
     setOpen(false)
 
-    dialogPendingTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 520, () => {
-      dialogPendingTimeoutId = null
+    dialogPendingTimeoutId = GLib.timeout_add(
+      GLib.PRIORITY_DEFAULT,
+      520,
+      () => {
+        dialogPendingTimeoutId = null
 
-      const dialog = new Gtk.FileDialog({
-        title: "Select wallpaper directory",
-        modal: false,
-      })
-      dialog.set_initial_folder(
-        Gio.File.new_for_path(wallpaperConfig().directory),
-      )
-      dialog.select_folder(null, null, (src, res) => {
-        try {
-          const file = (src as Gtk.FileDialog).select_folder_finish(res)
-          const newDir = file?.get_path()
-          if (newDir) {
-            setDirectory(newDir)
+        const dialog = new Gtk.FileDialog({
+          title: "Select wallpaper directory",
+          modal: false,
+        })
+        dialog.set_initial_folder(
+          Gio.File.new_for_path(wallpaperConfig().directory),
+        )
+        dialog.select_folder(null, null, (src, res) => {
+          try {
+            const file = (src as Gtk.FileDialog).select_folder_finish(res)
+            const newDir = file?.get_path()
+            if (newDir) {
+              setDirectory(newDir)
+            }
+          } catch {
+            // cancelled
           }
-        } catch {
-          // cancelled
-        }
-        // Reopen the menu after the selection completes/cancels
-        setOpen(true)
-      })
+          // Reopen the menu after the selection completes/cancels
+          setOpen(true)
+        })
 
-      return GLib.SOURCE_REMOVE
-    })
+        return GLib.SOURCE_REMOVE
+      },
+    )
   }
 
   function applyWallpaper(path: string) {

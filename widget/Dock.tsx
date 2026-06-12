@@ -174,45 +174,45 @@ export function DockWindow({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
         orientation={Gtk.Orientation.HORIZONTAL}
         spacing={4}
         $={(self) => {
-            // Fill in the DockItem buttons reactively.
-            // gnim's jsx has no tracking context inside a subscribe callback, so
-            // wrap in createRoot and rebuild the scope each time (same pattern as Wallpaper).
-            let dispose: (() => void) | null = null
+          // Fill in the DockItem buttons reactively.
+          // gnim's jsx has no tracking context inside a subscribe callback, so
+          // wrap in createRoot and rebuild the scope each time (same pattern as Wallpaper).
+          let dispose: (() => void) | null = null
 
-            const rebuild = () => {
-              if (dispose) {
-                dispose()
-                dispose = null
-              }
-              // Pop down old popovers before rebuilding (prevents remnants)
-              closePopovers()
-              popovers.length = 0
-              let child = self.get_first_child()
-              while (child) {
-                const next = child.get_next_sibling()
-                self.remove(child)
-                child = next
-              }
-              createRoot((d) => {
-                dispose = d
-                const items = dockItemsFor(monitorAccessor())
-                for (const item of items) {
-                  self.append(
-                    buildDockItem(
-                      item,
-                      popovers,
-                      notePopoverOpened,
-                      notePopoverClosed,
-                    ),
-                  )
-                }
-              })
+          const rebuild = () => {
+            if (dispose) {
+              dispose()
+              dispose = null
             }
-            rebuild()
-            monitorAccessor.subscribe(rebuild)
-            dockConfig.subscribe(rebuild)
-          }}
-        />
+            // Pop down old popovers before rebuilding (prevents remnants)
+            closePopovers()
+            popovers.length = 0
+            let child = self.get_first_child()
+            while (child) {
+              const next = child.get_next_sibling()
+              self.remove(child)
+              child = next
+            }
+            createRoot((d) => {
+              dispose = d
+              const items = dockItemsFor(monitorAccessor())
+              for (const item of items) {
+                self.append(
+                  buildDockItem(
+                    item,
+                    popovers,
+                    notePopoverOpened,
+                    notePopoverClosed,
+                  ),
+                )
+              }
+            })
+          }
+          rebuild()
+          monitorAccessor.subscribe(rebuild)
+          dockConfig.subscribe(rebuild)
+        }}
+      />
     </window>
   )
 }
@@ -284,10 +284,10 @@ function buildIndicator(item: DockItem): Gtk.Widget {
   const dots: Gtk.Widget[] = []
   const dotCount = Math.min(count, 3)
   for (let i = 0; i < dotCount; i++) {
-    dots.push(<box cssName="DockItemDot" /> as Gtk.Widget)
+    dots.push((<box cssName="DockItemDot" />) as Gtk.Widget)
   }
   if (count > 3) {
-    dots.push(<box cssName="DockItemDotMore" /> as Gtk.Widget)
+    dots.push((<box cssName="DockItemDotMore" />) as Gtk.Widget)
   }
   return (
     <box
@@ -301,10 +301,7 @@ function buildIndicator(item: DockItem): Gtk.Widget {
   ) as Gtk.Widget
 }
 
-function buildPopoverContent(
-  item: DockItem,
-  close: () => void,
-): Gtk.Widget {
+function buildPopoverContent(item: DockItem, close: () => void): Gtk.Widget {
   const rows: Gtk.Widget[] = []
 
   for (const window of item.windows) {
@@ -341,11 +338,7 @@ function buildPopoverContent(
   }
 
   if (item.windows.length > 0 && item.app) {
-    rows.push(
-      (
-        <box cssName="DockPopoverSeparator" />
-      ) as Gtk.Widget,
-    )
+    rows.push((<box cssName="DockPopoverSeparator" />) as Gtk.Widget)
   }
 
   // Toggle pinning (only when the .desktop entry resolves)

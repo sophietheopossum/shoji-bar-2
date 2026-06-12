@@ -77,11 +77,12 @@ export function StatusButton({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
   // LayerState.then returns undefined when no state is registered; in that case
   // always treat it as false (= not pressed = white icon).
   const isPressed: Accessor<boolean> =
-    LAYER_STATE.then(gdkmonitor, (state) =>
-      state.isOpen((isOpen) => isOpen),
-    ) ?? createComputed(() => false)
+    LAYER_STATE.then(gdkmonitor, (state) => state.isOpen((isOpen) => isOpen)) ??
+    createComputed(() => false)
   const suffix = (base: string) =>
-    createComputed(() => `${SRC}/assets/${base}${isPressed() ? "-dark" : ""}.svg`)
+    createComputed(
+      () => `${SRC}/assets/${base}${isPressed() ? "-dark" : ""}.svg`,
+    )
 
   return (
     <button
@@ -142,11 +143,7 @@ export function StatusButton({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
           })}
           pixelSize={14}
         />
-        <image
-          cssName="StatusButtonIcon"
-          file={suffix("sun")}
-          pixelSize={14}
-        />
+        <image cssName="StatusButtonIcon" file={suffix("sun")} pixelSize={14} />
       </box>
     </button>
   )
@@ -345,16 +342,18 @@ function QuickIsland(
 
   const notifBtn = quickButton(
     "notifications",
-    notifDnd(
-      (dnd) => `${SRC}/assets/${dnd ? "bell-no" : "bell"}-dark.svg`,
-    ),
+    notifDnd((dnd) => `${SRC}/assets/${dnd ? "bell-no" : "bell"}-dark.svg`),
     notifDnd((dnd) => (dnd ? "Silent" : "Notifications")),
     createComputed(() => !notifDnd()),
   )
 
   return (
     <box cssName="QuickIsland" orientation={Gtk.Orientation.VERTICAL}>
-      <box cssName="QuickGrid" orientation={Gtk.Orientation.VERTICAL} spacing={6}>
+      <box
+        cssName="QuickGrid"
+        orientation={Gtk.Orientation.VERTICAL}
+        spacing={6}
+      >
         <box spacing={6} homogeneous>
           {wifiBtn}
           {btBtn}
@@ -494,9 +493,7 @@ function wifiSubmenu(): Gtk.Widget {
         onClicked={() => wifiDisconnect()}
       >
         <label
-          label={wifiSsid((s) =>
-            s ? `Disconnect "${s}"` : "Disconnect",
-          )}
+          label={wifiSsid((s) => (s ? `Disconnect "${s}"` : "Disconnect"))}
         />
       </button>
     </box>
@@ -732,7 +729,11 @@ function buildWifiPasswordForm(
       />
       {entry}
       {v.error ? (
-        <label cssName="WifiFormError" halign={Gtk.Align.START} label={v.error} />
+        <label
+          cssName="WifiFormError"
+          halign={Gtk.Align.START}
+          label={v.error}
+        />
       ) : null}
       <box halign={Gtk.Align.END} spacing={6}>
         <button
@@ -1048,7 +1049,11 @@ function buildBtError(
 
 function ppdSubmenu(): Gtk.Widget {
   const list = (
-    <box cssName="SubmenuList" orientation={Gtk.Orientation.VERTICAL} spacing={2} />
+    <box
+      cssName="SubmenuList"
+      orientation={Gtk.Orientation.VERTICAL}
+      spacing={2}
+    />
   ) as Gtk.Box
   let dispose: (() => void) | null = null
   const rebuild = () => {
@@ -1108,23 +1113,21 @@ function notificationsSubmenu(): Gtk.Widget {
         hexpand
         label={createComputed(() => `Notifications (${notifList().length})`)}
       />
-      <button
-        cssName="SubmenuHeaderAction"
-        onClicked={toggleDnd}
-      >
+      <button cssName="SubmenuHeaderAction" onClicked={toggleDnd}>
         <label label={notifDnd((dnd) => (dnd ? "Unmute" : "Silent"))} />
       </button>
-      <button
-        cssName="SubmenuHeaderAction"
-        onClicked={dismissAllNotifications}
-      >
+      <button cssName="SubmenuHeaderAction" onClicked={dismissAllNotifications}>
         <label label="Clear" />
       </button>
     </box>
   ) as Gtk.Widget
 
   const list = (
-    <box cssName="SubmenuList" orientation={Gtk.Orientation.VERTICAL} spacing={2} />
+    <box
+      cssName="SubmenuList"
+      orientation={Gtk.Orientation.VERTICAL}
+      spacing={2}
+    />
   ) as Gtk.Box
 
   // Wrap in Gtk.Revealer for height collapse, and let CSS handle translateX + opacity.
@@ -1300,7 +1303,11 @@ function notificationsSubmenu(): Gtk.Widget {
   // When the submenu itself is dropped, also free scopes still lingering mid-leave-animation.
   onCleanup(() => {
     for (const d of disposeById.values()) {
-      try { d() } catch { /* ignore */ }
+      try {
+        d()
+      } catch {
+        /* ignore */
+      }
     }
     disposeById.clear()
   })
@@ -1497,11 +1504,7 @@ export function notificationRow(
               ellipsize={3}
               label={n.app_name || "Notification"}
             />
-            <label
-              cssName="NotifAge"
-              halign={Gtk.Align.END}
-              label={ageLabel}
-            />
+            <label cssName="NotifAge" halign={Gtk.Align.END} label={ageLabel} />
           </box>
           {n.summary ? (
             <label
@@ -1569,7 +1572,11 @@ export function notificationRow(
 // =============================================================================
 function SlidersIsland(): Gtk.Widget {
   return (
-    <box cssName="SlidersIsland" orientation={Gtk.Orientation.VERTICAL} spacing={0}>
+    <box
+      cssName="SlidersIsland"
+      orientation={Gtk.Orientation.VERTICAL}
+      spacing={0}
+    >
       {sliderRow(
         createComputed(() =>
           speakerMute() || speakerVolume() === 0
@@ -1675,9 +1682,7 @@ function MediaIsland(): Gtk.Widget {
     const p = primaryPlayer()
     return p ? formatMprisTime(p.position) : "0:00"
   })
-  const lengthLabel = createComputed(() =>
-    formatMprisTime(mediaLength()),
-  )
+  const lengthLabel = createComputed(() => formatMprisTime(mediaLength()))
   const progress = createComputed(() => {
     tick()
     const p = primaryPlayer()
@@ -1755,17 +1760,12 @@ function MediaIsland(): Gtk.Widget {
   let userSeekingTimeoutId: number | null = null
   function markUserSeeking() {
     userSeeking = true
-    if (userSeekingTimeoutId !== null)
-      GLib.source_remove(userSeekingTimeoutId)
-    userSeekingTimeoutId = GLib.timeout_add(
-      GLib.PRIORITY_DEFAULT,
-      1500,
-      () => {
-        userSeeking = false
-        userSeekingTimeoutId = null
-        return GLib.SOURCE_REMOVE
-      },
-    )
+    if (userSeekingTimeoutId !== null) GLib.source_remove(userSeekingTimeoutId)
+    userSeekingTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
+      userSeeking = false
+      userSeekingTimeoutId = null
+      return GLib.SOURCE_REMOVE
+    })
   }
 
   seekScale.connect("change-value", (_self, _scroll, value) => {
@@ -1798,7 +1798,11 @@ function MediaIsland(): Gtk.Widget {
   )
 
   return (
-    <box cssName="MediaIsland" orientation={Gtk.Orientation.VERTICAL} spacing={6}>
+    <box
+      cssName="MediaIsland"
+      orientation={Gtk.Orientation.VERTICAL}
+      spacing={6}
+    >
       <box cssName="MediaTop" spacing={10}>
         {artImage}
         <box
@@ -1831,10 +1835,7 @@ function MediaIsland(): Gtk.Widget {
       </box>
 
       <box cssName="MediaControls" halign={Gtk.Align.CENTER} spacing={10}>
-        <button
-          cssName="MediaButton"
-          onClicked={() => playerControl("prev")}
-        >
+        <button cssName="MediaButton" onClicked={() => playerControl("prev")}>
           <image file={`${SRC}/assets/backward-step.svg`} pixelSize={18} />
         </button>
         <button
@@ -1844,14 +1845,10 @@ function MediaIsland(): Gtk.Widget {
         >
           <image file={playPauseIcon} pixelSize={18} />
         </button>
-        <button
-          cssName="MediaButton"
-          onClicked={() => playerControl("next")}
-        >
+        <button cssName="MediaButton" onClicked={() => playerControl("next")}>
           <image file={`${SRC}/assets/forward-step.svg`} pixelSize={18} />
         </button>
       </box>
     </box>
   ) as Gtk.Widget
 }
-

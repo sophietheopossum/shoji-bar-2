@@ -63,7 +63,9 @@ export function copyEntry(id: string): Promise<string> {
 
 // Turn an image entry into a small fixed-height PNG thumbnail and return its path.
 // Skip re-decoding if it was already generated.
-export async function ensureThumbnail(entry: ClipEntry): Promise<string | null> {
+export async function ensureThumbnail(
+  entry: ClipEntry,
+): Promise<string | null> {
   if (!entry.isImage) {
     return null
   }

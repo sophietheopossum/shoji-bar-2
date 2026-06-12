@@ -1,5 +1,12 @@
 import { Astal, Gdk, Gtk } from "ags/gtk4"
-import { Accessor, For, createState, createComputed, createEffect, onCleanup } from "gnim"
+import {
+  Accessor,
+  For,
+  createState,
+  createComputed,
+  createEffect,
+  onCleanup,
+} from "gnim"
 import { LayerState } from "../utils/LayerState"
 import { isPointInsideWidget } from "../utils/pointInside"
 import {
@@ -43,7 +50,11 @@ export function controlClipboardMenu(
   })
 }
 
-export function ClipboardMenuLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
+export function ClipboardMenuLayer({
+  gdkmonitor,
+}: {
+  gdkmonitor: Gdk.Monitor
+}) {
   const [isOpen, setIsOpen] = createState(false)
   const [mounted, setMounted] = createState(false)
 
@@ -197,7 +208,10 @@ export function ClipboardMenuLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) 
             halign={Gtk.Align.FILL}
             hexpand
           >
-            <image cssName={"SearchBoxIcon"} file={`${SRC}/assets/search.svg`} />
+            <image
+              cssName={"SearchBoxIcon"}
+              file={`${SRC}/assets/search.svg`}
+            />
             <entry
               $={(self) => (entryRef = self)}
               cssName={"SearchBoxEntry"}
@@ -377,7 +391,12 @@ function buildClipRow(
   }
 
   return (
-    <button cssName={"ClipButton"} class={klass} canFocus={false} onClicked={onActivate}>
+    <button
+      cssName={"ClipButton"}
+      class={klass}
+      canFocus={false}
+      onClicked={onActivate}
+    >
       {content}
     </button>
   ) as Gtk.Widget

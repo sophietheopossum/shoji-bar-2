@@ -17,7 +17,11 @@ export type WsWorkspace = {
   active: boolean
   windows: WsWindow[]
 }
-export type WsMonitor = { name: string; active: number; workspaces: WsWorkspace[] }
+export type WsMonitor = {
+  name: string
+  active: number
+  workspaces: WsWorkspace[]
+}
 export type WsView = { currentMonitor: string; monitors: WsMonitor[] }
 
 // One shared connection per bar process. Both the workspace and layout widgets
@@ -26,7 +30,9 @@ const [view, setView] = createState<WsView | null>(null)
 export { view }
 
 // Hold dock.proximity state per connector. The Dock only reads its own monitor's flag.
-const [dockProximity, setDockProximity] = createState<Record<string, boolean>>({})
+const [dockProximity, setDockProximity] = createState<Record<string, boolean>>(
+  {},
+)
 export { dockProximity }
 
 // Snap-zone preview pushed by ShojiWM during a window drag. Per connector:
@@ -38,7 +44,9 @@ export type SnapPreview = {
   height: number
   kind: "floating" | "tiling"
 } | null
-const [snapPreview, setSnapPreview] = createState<Record<string, SnapPreview>>({})
+const [snapPreview, setSnapPreview] = createState<Record<string, SnapPreview>>(
+  {},
+)
 export { snapPreview }
 
 export const ipc: ShojiIpcClient = connectShojiIpc(
@@ -103,7 +111,9 @@ export function activeWorkspace(monitor: WsMonitor | null): WsWorkspace | null {
   }
   return (
     monitor.workspaces.find((workspace) => workspace.active) ??
-    monitor.workspaces.find((workspace) => workspace.index === monitor.active) ??
+    monitor.workspaces.find(
+      (workspace) => workspace.index === monitor.active,
+    ) ??
     null
   )
 }

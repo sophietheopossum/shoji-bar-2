@@ -178,12 +178,9 @@ export function NotifPopupLayer({
   })
   // When a notification is dismissed/resolved (via the popup's close button, the notification list, or
   // resolved by the app), hide the popup too.
-  const resolvedHandlerId = notifd.connect(
-    "resolved",
-    (_self, id: number) => {
-      if (entries.has(id)) startSlideOut(id)
-    },
-  )
+  const resolvedHandlerId = notifd.connect("resolved", (_self, id: number) => {
+    if (entries.has(id)) startSlideOut(id)
+  })
 
   const win = (
     <window
