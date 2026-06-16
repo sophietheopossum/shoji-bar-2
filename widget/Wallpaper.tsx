@@ -62,6 +62,7 @@ export function WallpaperBackground({
   return (
     <window
       name="wallpaper-background"
+      namespace="no_blur"
       class="WallpaperBackground"
       gdkmonitor={gdkmonitor}
       layer={Astal.Layer.BACKGROUND}

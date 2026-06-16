@@ -118,6 +118,7 @@ export function SnapPreviewLayer({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
   return (
     <window
       name="snap-preview"
+      namespace="no_blur"
       class="SnapPreviewLayer"
       gdkmonitor={gdkmonitor}
       layer={Astal.Layer.OVERLAY}

@@ -185,6 +185,7 @@ export function NotifPopupLayer({
   const win = (
     <window
       name="notifpopuplayer"
+      namespace="no_blur"
       class="NotifPopupLayer"
       gdkmonitor={gdkmonitor}
       layer={Astal.Layer.OVERLAY}
