@@ -68,9 +68,17 @@ function buildTrayItem(item: AstalTray.TrayItem): Gtk.Widget {
 
   onCleanup(() => {
     if (popover) {
+      // Tear down cleanly. A tray item is removed (e.g. the app quits) while
+      // its dbusmenu GMenuModel is being destroyed underneath us; unparenting
+      // an *open*, model-bound PopoverMenu in that moment sends GTK into a
+      // recursive accessibility/action-muxer notify storm that pegs a core.
+      // Pop it down and detach the model + action group first.
+      popover.popdown()
+      popover.set_menu_model(null)
       popover.unparent()
       popover = null
     }
+    button.insert_action_group("dbusmenu", null)
   })
 
   return button
