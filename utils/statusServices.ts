@@ -1,6 +1,5 @@
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
-import AstalNetwork from "gi://AstalNetwork"
 import AstalPowerProfiles from "gi://AstalPowerProfiles"
 import AstalNotifd from "gi://AstalNotifd"
 import AstalMpris from "gi://AstalMpris"
@@ -13,7 +12,6 @@ import { execAsync, subprocess, type Process } from "ags/process"
 // Singleton
 // =============================================================================
 
-export const network = AstalNetwork.get_default()
 export const powerProfiles = AstalPowerProfiles.get_default()
 export const notifd = AstalNotifd.get_default()
 export const mpris = AstalMpris.get_default()
@@ -32,195 +30,11 @@ export const battery = AstalBattery.get_default()
 // high-frequency (1.5s) polling to improve responsiveness.
 // =============================================================================
 
-/** Our own AP type. Minimally compatible with AstalNetwork.AccessPoint: ssid / strength. */
-export type WifiAp = {
-  ssid: string
-  bssid: string
-  /** 0..100 */
-  strength: number
-  /** "WPA2/WPA3" / "WPA" / "WEP" / "Open" / "Unknown" */
-  security: string
-  /** Whether we are currently connected to this AP */
-  inUse: boolean
-}
-
-/** State enum with essentially the same meaning as AstalNetwork.Internet. */
-export const WifiInternet = {
-  DISCONNECTED: 0,
-  CONNECTING: 1,
-  CONNECTED: 2,
-} as const
-export type WifiInternetValue = (typeof WifiInternet)[keyof typeof WifiInternet]
-
-const [wifiEnabledState, setWifiEnabledState] = createState(false)
-const [wifiSsidState, setWifiSsidState] = createState<string | null>(null)
-const [wifiInternetState, setWifiInternetState] =
-  createState<WifiInternetValue>(WifiInternet.DISCONNECTED)
-const [wifiStrengthState, setWifiStrengthState] = createState(0)
-const [wifiScanningState, setWifiScanningState] = createState(false)
-const [wifiApsState, setWifiApsState] = createState<WifiAp[]>([])
-
-export const wifiEnabled = wifiEnabledState
-export const wifiSsid = wifiSsidState
-export const wifiInternet = wifiInternetState
-export const wifiStrength = wifiStrengthState
-export const wifiScanning = wifiScanningState
-export const wifiAccessPoints = wifiApsState
-
-// ---- Parse nmcli -t output (fields separated by `:`; a literal `:` in a value is escaped as `\:`).
-function splitNmcliFields(line: string): string[] {
-  const fields: string[] = []
-  let current = ""
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i]
-    if (ch === "\\" && i + 1 < line.length) {
-      current += line[i + 1]
-      i++
-    } else if (ch === ":") {
-      fields.push(current)
-      current = ""
-    } else {
-      current += ch
-    }
-  }
-  fields.push(current)
-  return fields
-}
-
-function normalizeSecurity(sec: string): string {
-  const s = sec.trim()
-  if (s.length === 0 || s === "--") return "Open"
-  if (/WPA3|RSN/i.test(s)) return "WPA2/WPA3"
-  if (/WPA2/i.test(s)) return "WPA2"
-  if (/WPA/i.test(s)) return "WPA"
-  if (/WEP/i.test(s)) return "WEP"
-  return s
-}
-
-export function accessPointRequiresPassword(ap: WifiAp): boolean {
-  return ap.security !== "Open"
-}
-
-export function accessPointSecurity(ap: WifiAp): string {
-  return ap.security
-}
-
 // ---- Actual polling ----
 let pollingIntervalMs = 3000
 let pollingTimeoutId: number | null = null
 let menuFocusCount = 0
 let pollInFlight = false
-
-async function pollWifiState(): Promise<void> {
-  if (pollInFlight) return
-  pollInFlight = true
-  try {
-    // 1) Wi-Fi radio enabled?
-    let enabled = false
-    try {
-      const out = await execAsync(["nmcli", "-t", "-f", "WIFI", "radio"])
-      const text = typeof out === "string" ? out : ""
-      enabled = text.trim() === "enabled"
-    } catch (err) {
-      console.error("[status] poll: radio failed:", err)
-      enabled = false
-    }
-    setWifiEnabledState(enabled)
-
-    if (!enabled) {
-      setWifiSsidState(null)
-      setWifiInternetState(WifiInternet.DISCONNECTED)
-      setWifiStrengthState(0)
-      setWifiApsState([])
-      return
-    }
-
-    // 2) Determine CONNECTED/CONNECTING from device state + capture the iface
-    let deviceState: string | null = null
-    try {
-      const out = await execAsync(["nmcli", "-t", "-f", "TYPE,STATE", "device"])
-      const text = typeof out === "string" ? out : ""
-      for (const line of text.split("\n")) {
-        const f = splitNmcliFields(line)
-        if (f.length < 2) continue
-        if (f[0] === "wifi") {
-          deviceState = f[1]
-          break
-        }
-      }
-    } catch {
-      // ignore
-    }
-
-    // 3) AP list
-    let activeSsid: string | null = null
-    let activeStrength = 0
-    let aps: WifiAp[] = []
-    try {
-      const out = await execAsync([
-        "nmcli",
-        "-t",
-        "-f",
-        "IN-USE,BSSID,SSID,SIGNAL,SECURITY",
-        "device",
-        "wifi",
-        "list",
-        "--rescan",
-        "no",
-      ])
-      const text = typeof out === "string" ? out : ""
-      for (const line of text.split("\n")) {
-        if (!line) continue
-        const f = splitNmcliFields(line)
-        if (f.length < 5) continue
-        const inUse = f[0] === "*"
-        const bssid = f[1]
-        const ssid = f[2]
-        const strength = Number.parseInt(f[3], 10) || 0
-        const security = normalizeSecurity(f[4])
-        if (!ssid) continue
-        const ap: WifiAp = { ssid, bssid, strength, security, inUse }
-        aps.push(ap)
-        if (inUse) {
-          activeSsid = ssid
-          activeStrength = strength
-        }
-      }
-      // Dedupe same SSID (prefer in-use, then by signal strength descending)
-      const best = new Map<string, WifiAp>()
-      for (const ap of aps) {
-        const existing = best.get(ap.ssid)
-        if (
-          !existing ||
-          (ap.inUse && !existing.inUse) ||
-          (!existing.inUse && ap.strength > existing.strength)
-        ) {
-          best.set(ap.ssid, ap)
-        }
-      }
-      aps = [...best.values()].sort((a, b) => {
-        if (a.inUse !== b.inUse) return a.inUse ? -1 : 1
-        return b.strength - a.strength
-      })
-    } catch (err) {
-      console.error("[status] poll: ap list failed:", err)
-    }
-
-    setWifiApsState(aps)
-    setWifiSsidState(activeSsid)
-    setWifiStrengthState(activeStrength)
-    // CONNECTING check: device state is a "connecting" variant
-    if (deviceState && /connecting/i.test(deviceState)) {
-      setWifiInternetState(WifiInternet.CONNECTING)
-    } else if (activeSsid) {
-      setWifiInternetState(WifiInternet.CONNECTED)
-    } else {
-      setWifiInternetState(WifiInternet.DISCONNECTED)
-    }
-  } finally {
-    pollInFlight = false
-  }
-}
 
 function setPollIntervalAndStart(intervalMs: number) {
   if (pollingTimeoutId !== null && pollingIntervalMs === intervalMs) return
@@ -230,168 +44,12 @@ function setPollIntervalAndStart(intervalMs: number) {
   }
   pollingIntervalMs = intervalMs
   pollingTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, intervalMs, () => {
-    void pollWifiState()
     return GLib.SOURCE_CONTINUE
   })
 }
 
-/**
- * Call while the Wi-Fi submenu is open to raise the poll interval to 1.5s.
- * Calling the returned function restores the background interval (3s).
- */
-export function focusWifiPolling(): () => void {
-  menuFocusCount += 1
-  if (menuFocusCount === 1) {
-    setPollIntervalAndStart(1500)
-  }
-  void pollWifiState() // immediate update
-  let released = false
-  return () => {
-    if (released) return
-    released = true
-    menuFocusCount = Math.max(0, menuFocusCount - 1)
-    if (menuFocusCount === 0) {
-      setPollIntervalAndStart(3000)
-    }
-  }
-}
-
 // Initial poll + start background 3s polling
 setPollIntervalAndStart(3000)
-void pollWifiState()
-
-// ---- Actions ----
-
-export function wifiIconName(): string {
-  if (!wifiEnabled()) return "wifi-off"
-  const s = wifiStrength()
-  if (s >= 70) return "wifi-full"
-  if (s >= 40) return "wifi-midium"
-  if (s >= 10) return "wifi-low"
-  return "wifi-off"
-}
-
-export async function setWifiEnabled(enabled: boolean): Promise<void> {
-  try {
-    await execAsync(["nmcli", "radio", "wifi", enabled ? "on" : "off"])
-  } catch (err) {
-    console.error("[status] wifi set enabled failed:", err)
-  }
-  void pollWifiState()
-}
-
-export async function toggleWifi(): Promise<void> {
-  return setWifiEnabled(!wifiEnabledState())
-}
-
-/** Explicitly run a rescan and set the scanning flag. */
-export async function triggerWifiScan(): Promise<void> {
-  if (!wifiEnabledState()) return
-  setWifiScanningState(true)
-  try {
-    await execAsync(["nmcli", "device", "wifi", "rescan"])
-  } catch (err) {
-    // Ignore "Scan request failed: Scanning not allowed immediately" and similar.
-    const msg = err instanceof Error ? err.message : String(err)
-    if (!/not allowed|too soon/i.test(msg)) {
-      console.error("[status] rescan failed:", err)
-    }
-  }
-  // Wait a bit for results to settle, then poll and clear the scanning flag.
-  GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
-    void pollWifiState().then(() => setWifiScanningState(false))
-    return GLib.SOURCE_REMOVE
-  })
-}
-
-export interface WifiConnectResult {
-  ok: boolean
-  message?: string
-  needsPassword?: boolean
-}
-
-function isPasswordError(message: string): boolean {
-  return /no[\s-]?secrets?|secret|password|authentication|802-11-wireless-security|invalid-secrets/i.test(
-    message,
-  )
-}
-
-export async function wifiConnect(
-  ssid: string,
-  password?: string,
-): Promise<WifiConnectResult> {
-  if (!ssid) {
-    return { ok: false, message: "SSID not specified" }
-  }
-  const args = ["nmcli", "-w", "30", "device", "wifi", "connect", ssid]
-  if (password && password.length > 0) {
-    args.push("password", password)
-  }
-  let result: WifiConnectResult
-  try {
-    await execAsync(args)
-    result = { ok: true }
-  } catch (err) {
-    const message =
-      err instanceof Error
-        ? err.message
-        : typeof err === "string"
-          ? err
-          : String(err)
-    result = { ok: false, message, needsPassword: isPasswordError(message) }
-  }
-  // Regardless of result, re-poll 3 times at a short interval to ensure the state is reflected.
-  for (const delay of [200, 800, 1800]) {
-    GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
-      void pollWifiState()
-      return GLib.SOURCE_REMOVE
-    })
-  }
-  return result
-}
-
-/**
- * Put the Wi-Fi device itself into the DISCONNECTED state (suppress autoconnect).
- */
-export async function wifiDisconnect(): Promise<void> {
-  let iface: string | null = null
-  try {
-    const out = await execAsync(["nmcli", "-t", "-f", "DEVICE,TYPE", "device"])
-    const text = typeof out === "string" ? out : ""
-    for (const line of text.split("\n")) {
-      const f = splitNmcliFields(line)
-      if (f.length < 2) continue
-      if (f[1] === "wifi" && f[0].length > 0) {
-        iface = f[0]
-        break
-      }
-    }
-  } catch (err) {
-    console.error("[status] wifi device list failed:", err)
-  }
-
-  if (iface) {
-    try {
-      await execAsync(["nmcli", "device", "disconnect", iface])
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (!/not active|already/i.test(msg)) {
-        console.error("[status] wifi disconnect failed:", err)
-      }
-    }
-  }
-
-  // Poll multiple times for immediate UI reflection + reliability.
-  setWifiSsidState(null)
-  setWifiInternetState(WifiInternet.DISCONNECTED)
-  setWifiStrengthState(0)
-  for (const delay of [150, 600, 1500]) {
-    GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
-      void pollWifiState()
-      return GLib.SOURCE_REMOVE
-    })
-  }
-}
 
 // =============================================================================
 // Bluetooth

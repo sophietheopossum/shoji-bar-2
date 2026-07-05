@@ -13,21 +13,6 @@ import Gio from "gi://Gio"
 import { LayerState } from "../utils/LayerState"
 import { isPointInsideWidget } from "../utils/pointInside"
 import {
-  accessPointRequiresPassword,
-  accessPointSecurity,
-  bluetoothConnect,
-  bluetoothDevices,
-  bluetoothDisconnect,
-  bluetoothEnabled,
-  bluetoothPrimary,
-  bluetoothScanning,
-  brightness,
-  brightnessAvailable,
-  dismissAllNotifications,
-  focusBluetoothPolling,
-  focusWifiPolling,
-  setBluetoothEnabled,
-  triggerBluetoothScan,
   formatMprisTime,
   mediaArtist,
   mediaArtUrl,
@@ -44,19 +29,21 @@ import {
   setBrightness,
   setPpdProfile,
   setSpeakerVolume,
-  setWifiEnabled,
   speakerMute,
   speakerVolume,
   toggleDnd,
   toggleSpeakerMute,
-  triggerWifiScan,
-  wifiAccessPoints,
-  wifiConnect,
-  wifiDisconnect,
-  wifiEnabled,
-  wifiScanning,
-  wifiSsid,
-  wifiStrength,
+  bluetoothDevices,
+  bluetoothDisconnect,
+  bluetoothEnabled,
+  bluetoothPrimary,
+  bluetoothScanning,
+  brightness,
+  brightnessAvailable,
+  dismissAllNotifications,
+  focusBluetoothPolling,
+  setBluetoothEnabled,
+  triggerBluetoothScan,
 } from "../utils/statusServices"
 
 type StatusMenuState = {
@@ -66,7 +53,7 @@ type StatusMenuState = {
 
 const LAYER_STATE = new LayerState<StatusMenuState>()
 
-type Submenu = "wifi" | "bluetooth" | "ppd" | "notifications"
+type Submenu = "bluetooth" | "ppd" | "notifications"
 
 // =============================================================================
 // Trigger button on the bar: shows the 7 main status icons in a row
@@ -93,19 +80,6 @@ export function StatusButton({ gdkmonitor }: { gdkmonitor: Gdk.Monitor }) {
       }
     >
       <box cssName="StatusButtonRow" spacing={4}>
-        <image
-          cssName="StatusButtonIcon"
-          file={createComputed(() => {
-            const dark = isPressed() ? "-dark" : ""
-            if (!wifiEnabled()) return `${SRC}/assets/wifi-off${dark}.svg`
-            const s = wifiStrength()
-            if (s >= 70) return `${SRC}/assets/wifi-full${dark}.svg`
-            if (s >= 40) return `${SRC}/assets/wifi-midium${dark}.svg`
-            if (s >= 10) return `${SRC}/assets/wifi-low${dark}.svg`
-            return `${SRC}/assets/wifi-off${dark}.svg`
-          })}
-          pixelSize={14}
-        />
         <image
           cssName="StatusButtonIcon"
           // When BT is off, hide the icon itself to distinguish on/off.
@@ -309,23 +283,6 @@ function QuickIsland(
 
   // Icons inside QuickButton sit on a dark theme (accent-colored background) when active,
   // so white is hard to see. Use the dedicated -dark.svg.
-  const wifiBtn = quickButton(
-    "wifi",
-    createComputed(() => {
-      if (!wifiEnabled()) return `${SRC}/assets/wifi-off-dark.svg`
-      const s = wifiStrength()
-      if (s >= 70) return `${SRC}/assets/wifi-full-dark.svg`
-      if (s >= 40) return `${SRC}/assets/wifi-midium-dark.svg`
-      if (s >= 10) return `${SRC}/assets/wifi-low-dark.svg`
-      return `${SRC}/assets/wifi-off-dark.svg`
-    }),
-    createComputed(() => {
-      if (!wifiEnabled()) return "Off"
-      return wifiSsid() ?? "Not connected"
-    }),
-    wifiEnabled,
-  )
-
   const btBtn = quickButton(
     "bluetooth",
     createComputed(() => `${SRC}/assets/bluetooth-dark.svg`),
@@ -355,11 +312,10 @@ function QuickIsland(
         spacing={6}
       >
         <box spacing={6} homogeneous>
-          {wifiBtn}
           {btBtn}
+          {ppdBtn}
         </box>
         <box spacing={6} homogeneous>
-          {ppdBtn}
           {notifBtn}
         </box>
       </box>
@@ -413,8 +369,6 @@ function Submenu(activeSubmenu: Accessor<Submenu>): Gtk.Widget {
 
 function buildSubmenuContent(sub: Submenu): Gtk.Widget {
   switch (sub) {
-    case "wifi":
-      return wifiSubmenu()
     case "bluetooth":
       return bluetoothSubmenu()
     case "ppd":
@@ -422,393 +376,6 @@ function buildSubmenuContent(sub: Submenu): Gtk.Widget {
     case "notifications":
       return notificationsSubmenu()
   }
-}
-
-// =============================================================================
-// Wi-Fi submenu
-// Switch between three internal modes (list / password entry / connecting) within one container.
-// =============================================================================
-
-type WifiView =
-  | { kind: "list" }
-  | {
-      kind: "password"
-      ssid: string
-      security: string
-      error?: string
-    }
-  | { kind: "connecting"; ssid: string }
-  | { kind: "error"; ssid: string; message: string }
-
-function wifiSubmenu(): Gtk.Widget {
-  const [wifiView, setWifiView] = createState<WifiView>({ kind: "list" })
-
-  // Raise the polling frequency while shown. Call release on submenu unmount to restore.
-  const releaseFocus = focusWifiPolling()
-  onCleanup(releaseFocus)
-
-  // Trigger a rescan when shown
-  void triggerWifiScan()
-
-  // ON/OFF toggle row (Gtk.Switch). Bind active to wifiEnabled, but
-  // even if active changes due to an external factor (polling) and notify::active fires,
-  // do nothing when desired === current, preventing recursive calls.
-  const toggleRow = (
-    <box cssName="WifiToggleRow" spacing={6}>
-      <label
-        cssName="WifiToggleLabel"
-        halign={Gtk.Align.START}
-        hexpand
-        label={wifiEnabled((on) => (on ? "Wi-Fi" : "Wi-Fi (off)"))}
-      />
-      <switch
-        cssName="WifiSwitch"
-        valign={Gtk.Align.CENTER}
-        active={wifiEnabled}
-        onNotifyActive={(self) => {
-          const desired = self.active
-          if (desired !== wifiEnabled()) {
-            void setWifiEnabled(desired)
-          }
-        }}
-      />
-    </box>
-  ) as Gtk.Widget
-
-  // Action row: rescan / disconnect.
-  // Rescan: label changes + disabled while scanning.
-  // Disconnect: disabled unless connected.
-  const actionsRow = (
-    <box cssName="WifiActionsRow" spacing={6} halign={Gtk.Align.END}>
-      <button
-        cssName="WifiActionButton"
-        sensitive={createComputed(() => wifiEnabled() && !wifiScanning())}
-        onClicked={() => void triggerWifiScan()}
-      >
-        <label label={wifiScanning((s) => (s ? "Scanning..." : "Rescan"))} />
-      </button>
-      <button
-        cssName="WifiActionButton"
-        sensitive={createComputed(() => wifiSsid() !== null)}
-        onClicked={() => wifiDisconnect()}
-      >
-        <label
-          label={wifiSsid((s) => (s ? `Disconnect "${s}"` : "Disconnect"))}
-        />
-      </button>
-    </box>
-  ) as Gtk.Widget
-
-  // Switchable content area
-  const content = (
-    <box
-      cssName="WifiContent"
-      orientation={Gtk.Orientation.VERTICAL}
-      spacing={4}
-      $={(self) => {
-        let dispose: (() => void) | null = null
-        const rebuild = () => {
-          if (dispose) {
-            dispose()
-            dispose = null
-          }
-          let child = self.get_first_child()
-          while (child) {
-            const next = child.get_next_sibling()
-            self.remove(child)
-            child = next
-          }
-          createRoot((d) => {
-            dispose = d
-            const v = wifiView()
-            if (v.kind === "list") {
-              self.append(buildWifiList(setWifiView))
-            } else if (v.kind === "password") {
-              self.append(buildWifiPasswordForm(v, setWifiView))
-            } else if (v.kind === "connecting") {
-              self.append(buildWifiConnecting(v))
-            } else if (v.kind === "error") {
-              self.append(buildWifiError(v, setWifiView))
-            }
-          })
-        }
-        // Only the list view reflects live AP / SSID data, so let those polled
-        // updates rebuild *only* while the list is showing. Otherwise a poll
-        // every ~1.5–3s would tear down and recreate the password form mid-typing
-        // (resetting the PasswordEntry). View switches always rebuild.
-        const rebuildIfList = () => {
-          if (wifiView().kind === "list") rebuild()
-        }
-        rebuild()
-        onCleanup(wifiView.subscribe(rebuild))
-        onCleanup(wifiAccessPoints.subscribe(rebuildIfList))
-        onCleanup(wifiSsid.subscribe(rebuildIfList))
-      }}
-    />
-  ) as Gtk.Widget
-
-  return (
-    <box orientation={Gtk.Orientation.VERTICAL} spacing={6}>
-      {toggleRow}
-      {actionsRow}
-      {content}
-    </box>
-  ) as Gtk.Widget
-}
-
-function buildWifiList(setWifiView: (v: WifiView) => void): Gtk.Widget {
-  const list = (
-    <box cssName="SubmenuList" orientation={Gtk.Orientation.VERTICAL} />
-  ) as Gtk.Box
-
-  if (!wifiEnabled()) {
-    list.append(
-      (
-        <label
-          cssName="SubmenuEmpty"
-          halign={Gtk.Align.CENTER}
-          label="Wi-Fi is off"
-        />
-      ) as Gtk.Widget,
-    )
-    return list
-  }
-
-  const aps = wifiAccessPoints()
-  if (aps.length === 0) {
-    list.append(
-      (
-        <label
-          cssName="SubmenuEmpty"
-          halign={Gtk.Align.CENTER}
-          label="Scanning..."
-        />
-      ) as Gtk.Widget,
-    )
-    return list
-  }
-
-  const currentSsid = wifiSsid()
-
-  for (const ap of aps) {
-    // APs may be GC'd between scans, so snapshot the values the UI needs, and
-    // re-fetch the AP by SSID on click. The closure doesn't hold ap directly.
-    let ssid: string | null = null
-    let strength = 0
-    let requiresPw = false
-    let security = "Unknown"
-    try {
-      ssid = ap.ssid ?? null
-      strength = Math.round(ap.strength ?? 0)
-      requiresPw = accessPointRequiresPassword(ap)
-      security = accessPointSecurity(ap)
-    } catch {
-      continue
-    }
-    if (!ssid) continue
-    const ssidValue = ssid
-    const isCurrent = ssid === currentSsid
-
-    list.append(
-      (
-        <button
-          cssName="SubmenuRow"
-          class={isCurrent ? "active" : ""}
-          onClicked={() => {
-            if (isCurrent) {
-              wifiDisconnect()
-              return
-            }
-            // Expecting known/open, first activate without a password.
-            // On failure, go to password mode via needsPassword.
-            if (!requiresPw) {
-              setWifiView({ kind: "connecting", ssid: ssidValue })
-              wifiConnect(ssidValue).then((res) => {
-                if (res.ok) {
-                  setWifiView({ kind: "list" })
-                } else if (res.needsPassword) {
-                  setWifiView({ kind: "password", ssid: ssidValue, security })
-                } else {
-                  setWifiView({
-                    kind: "error",
-                    ssid: ssidValue,
-                    message: res.message ?? "Failed",
-                  })
-                }
-              })
-            } else {
-              // For encrypted networks, try without a password first; if saved, it just connects
-              setWifiView({ kind: "connecting", ssid: ssidValue })
-              wifiConnect(ssidValue).then((res) => {
-                if (res.ok) {
-                  setWifiView({ kind: "list" })
-                } else if (res.needsPassword) {
-                  setWifiView({ kind: "password", ssid: ssidValue, security })
-                } else {
-                  setWifiView({
-                    kind: "error",
-                    ssid: ssidValue,
-                    message: res.message ?? "Failed",
-                  })
-                }
-              })
-            }
-          }}
-        >
-          <box spacing={8}>
-            <label
-              cssName="SubmenuRowLabel"
-              halign={Gtk.Align.START}
-              hexpand
-              ellipsize={3}
-              label={ssid}
-            />
-            <label
-              cssName="SubmenuRowSub"
-              halign={Gtk.Align.END}
-              label={
-                isCurrent
-                  ? `${strength}% · Connected`
-                  : `${strength}% · ${security}`
-              }
-            />
-          </box>
-        </button>
-      ) as Gtk.Widget,
-    )
-  }
-
-  return list
-}
-
-function buildWifiPasswordForm(
-  v: Extract<WifiView, { kind: "password" }>,
-  setWifiView: (v: WifiView) => void,
-): Gtk.Widget {
-  const entry = new Gtk.PasswordEntry()
-  entry.placeholderText = "Password"
-  entry.showPeekIcon = true
-  entry.add_css_class("WifiPasswordEntry")
-
-  const submit = () => {
-    const password = entry.get_text()
-    if (!password || password.length === 0) {
-      return
-    }
-    setWifiView({ kind: "connecting", ssid: v.ssid })
-    wifiConnect(v.ssid, password).then((res) => {
-      if (res.ok) {
-        setWifiView({ kind: "list" })
-      } else if (res.needsPassword) {
-        setWifiView({
-          kind: "password",
-          ssid: v.ssid,
-          security: v.security,
-          error: "Incorrect password",
-        })
-      } else {
-        setWifiView({
-          kind: "error",
-          ssid: v.ssid,
-          message: res.message ?? "Failed",
-        })
-      }
-    })
-  }
-
-  entry.connect("activate", submit)
-
-  return (
-    <box
-      cssName="WifiPasswordForm"
-      orientation={Gtk.Orientation.VERTICAL}
-      spacing={6}
-    >
-      <label
-        cssName="WifiFormHeading"
-        halign={Gtk.Align.START}
-        label={`Connect to "${v.ssid}"`}
-      />
-      <label
-        cssName="WifiFormSub"
-        halign={Gtk.Align.START}
-        label={`Security: ${v.security}`}
-      />
-      {entry}
-      {v.error ? (
-        <label
-          cssName="WifiFormError"
-          halign={Gtk.Align.START}
-          label={v.error}
-        />
-      ) : null}
-      <box halign={Gtk.Align.END} spacing={6}>
-        <button
-          cssName="WifiFormCancel"
-          onClicked={() => setWifiView({ kind: "list" })}
-        >
-          <label label="Cancel" />
-        </button>
-        <button cssName="WifiFormConnect" onClicked={submit}>
-          <label label="Connect" />
-        </button>
-      </box>
-    </box>
-  ) as Gtk.Widget
-}
-
-function buildWifiConnecting(
-  v: Extract<WifiView, { kind: "connecting" }>,
-): Gtk.Widget {
-  return (
-    <box
-      cssName="WifiConnecting"
-      orientation={Gtk.Orientation.VERTICAL}
-      halign={Gtk.Align.CENTER}
-      valign={Gtk.Align.CENTER}
-      spacing={6}
-    >
-      <Gtk.Spinner spinning />
-      <label
-        cssName="WifiConnectingLabel"
-        label={`Connecting to "${v.ssid}"...`}
-      />
-    </box>
-  ) as Gtk.Widget
-}
-
-function buildWifiError(
-  v: Extract<WifiView, { kind: "error" }>,
-  setWifiView: (v: WifiView) => void,
-): Gtk.Widget {
-  return (
-    <box
-      cssName="WifiErrorForm"
-      orientation={Gtk.Orientation.VERTICAL}
-      spacing={6}
-    >
-      <label
-        cssName="WifiFormHeading"
-        halign={Gtk.Align.START}
-        label={`Failed to connect to "${v.ssid}"`}
-      />
-      <label
-        cssName="WifiFormError"
-        halign={Gtk.Align.START}
-        ellipsize={3}
-        maxWidthChars={48}
-        label={v.message}
-      />
-      <box halign={Gtk.Align.END} spacing={6}>
-        <button
-          cssName="WifiFormCancel"
-          onClicked={() => setWifiView({ kind: "list" })}
-        >
-          <label label="Back" />
-        </button>
-      </box>
-    </box>
-  ) as Gtk.Widget
 }
 
 type BtView =
